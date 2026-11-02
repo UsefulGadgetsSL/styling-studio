@@ -20,7 +20,7 @@ Second Life category guide:
 - Head: mesh heads and their parts: LeLUTKA / "lel evox" / Avalon, Catwa, Genus ("/ HEAD / lel evox / AVALON 4.0").
 - Body: mesh bodies Legacy, Reborn, Maitreya, Kupra, eBODY, Inithium, Belleza ("Legacy (f) (1.7.1)", "Legacy (f) (Classic Fit)").
 - Teeth: teeth, gums, tongue ("/ GUMS / TEETH / lel evox 4.0"). Eyes: eyeballs/iris ("/ EYES / lel evox 4.0").
-- Brows: eyebrows. Nails: nails and nail polish. Hair: hair and hairbases.
+- Brows: eyebrows. Nails: nails and nail polish. Hair: hair and hairbases. "nova." is a hair brand, so "nova. ..." is Hair.
 - Skin: skins and skin details such as forehead lines, wrinkles, lotion. A skin named "(Brows - ...)" is still Skin.
 - Veins: face or body veins. Blemishes / Moles / Tattoo / Ears as named.
 - Makeup: eyeliner, eyeshadow, lipstick, blush, lashes, freckles, bindi.
