@@ -46,6 +46,27 @@ const SCHEMA = {
   required: ["items"]
 };
 
+// Shared brand list (brand -> category) from the website. Cached by Cloudflare for 1 hour.
+const BRANDS_URL = "https://usefulgadgetssl.github.io/styling-studio/brands.json";
+const bnorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+async function loadBrands() {
+  try {
+    const r = await fetch(BRANDS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.brands || []).filter(b => b && typeof b.name === "string" && CATS.includes(b.category));
+  } catch { return []; }
+}
+function brandCategory(brands, name) {
+  const n = bnorm(name);
+  let best = null, len = 0;
+  for (const b of brands) {
+    const k = bnorm(b.name);
+    if (k.length > len && (n === k || n.startsWith(k + " "))) { best = b; len = k.length; }
+  }
+  return best ? best.category : null;
+}
+
 // The model may answer with an object or with text that contains JSON
 function readItems(result) {
   let r = result && result.response !== undefined ? result.response : result;
@@ -57,9 +78,13 @@ function readItems(result) {
   return Array.isArray(r && r.items) ? r.items : [];
 }
 
-async function scanImage(env, image) {
+async function scanImage(env, image, brands) {
+  const hint = brands.length
+    ? "\nKnown brands that make only one kind of product (brand = category): " +
+      brands.map(b => b.name + " = " + b.category).join("; ") + "."
+    : "";
   const messages = [
-    { role: "system", content: SYSTEM },
+    { role: "system", content: SYSTEM + hint },
     {
       role: "user",
       content: [
@@ -110,16 +135,21 @@ export default {
     try {
       const items = [];
       const seen = new Set();
+      const brands = await loadBrands();
       for (const image of images) {
-        for (const it of await scanImage(env, image)) {
+        for (const it of await scanImage(env, image, brands)) {
           if (!it || typeof it.name !== "string") continue;
           const name = it.name.trim();
           const k = name.toLowerCase();
           if (name.length < 3 || seen.has(k) || /not\s+worn/i.test(name)) continue;
           seen.add(k);
+          // A known one-kind brand wins, except Head/Body brands (their parts can be eyes, teeth, ...)
+          const bc = brandCategory(brands, name);
+          let category = CATS.includes(it.category) ? it.category : "Other";
+          if (bc && (bc !== "Head" && bc !== "Body" || category === "Other")) category = bc;
           items.push({
             name,
-            category: CATS.includes(it.category) ? it.category : "Other",
+            category,
             confidence: ["high", "medium", "low"].includes(it.confidence) ? it.confidence : "low"
           });
         }
