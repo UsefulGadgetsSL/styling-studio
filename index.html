@@ -7,11 +7,15 @@
 <script>
 const $=id=>document.getElementById(id),cats=['Shape','Head','Body','Skin','Brows','Eyes','Hair','Makeup','Tattoo','Blemishes','Veins','Moles','Ears','Teeth','Nails','Clothing','Shoes','Jewelry','Accessories','Alpha','Other'];let entries=[],screens=[],db=[];const key='ug-styling-studio-v1';try{db=JSON.parse(localStorage.getItem(key)||'[]')}catch{};
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const notify=s=>{const t=$('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2600)};
+// Brand at the start of the name -> category (add more here: [/^brand\b/, 'Category'])
+const brandCats=[[/^nova\./,'Hair']];
 // Category from the product name. Order matters: the most specific words are checked first.
 function guess(s){const x=s.toLowerCase(),
  core=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' '); // without (Legacy) / [legacy/reborn] compatibility tags
  if(/alpha|hover height/.test(x))return 'Alpha';
  if(/\bshape\b|\b(?:female|male) human\b/.test(x))return 'Shape';
+ // Brands that only make one kind of product
+ for(const [re,c] of brandCats)if(re.test(x))return c;
  if(/teeth|gums|tongue/.test(x))return 'Teeth';
  if(/\bnails?\b/.test(x))return 'Nails';
  if(/\bears?\b/.test(x))return 'Ears';
