@@ -142,7 +142,17 @@ function parseStoreExport(raw){const out=[];for(let line of String(raw||'').spli
  else{const p=where.match(/^(.+?)\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);if(p)slurl='http://maps.secondlife.com/secondlife/'+encodeURIComponent(p[1].trim())+'/'+p[2]+'/'+p[3]+'/'+p[4]}
  if(slurl)out.push({name:m[1].trim(),category:m[2].trim(),slurl})}return out}
 // Store for a product: the brand's own SLURL, or an imported landmark whose name contains the brand / designer
-function storeFor(e){const b=brandFor(e.name||((e.designer||'')+' '+(e.product||'')),e.designer);if(b&&b.store)return {name:b.name,store:b.store};const label=b?b.name:String(e.designer||'').replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim(),k=bnorm(label),kc=k.replace(/ /g,'');if(k.length<3)return null;const hit=importedStores.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '))||(kc.length>=5&&importedStores.find(s=>bnorm(s.name).replace(/ /g,'').includes(kc)));return hit?{name:label,store:hit.slurl}:null}
+// Store name without words like "Mainstore", "Shop": "[theSkinnery] Mainstore" -> "theSkinnery"
+const storeWords=/\b(?:main\s*store|mainstore|main|store|shop|official|hq|outlet|sim|flagship|boutique|landmark|lm|location|gacha|event)\b/gi;
+function storeBrandName(name){return String(name||'').replace(/[\[\]{}()*|]/g,' ').replace(storeWords,' ').replace(/\s+/g,' ').trim()}
+function storeFor(e){const full=e.name||((e.designer||'')+' '+(e.product||''));const b=brandFor(full,e.designer);if(b&&b.store)return {name:b.name,store:b.store};
+ const label=b?b.name:String(e.designer||'').replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim(),k=bnorm(label),kc=k.replace(/ /g,'');
+ if(k.length>=3){const hit=importedStores.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '))||(kc.length>=5&&importedStores.find(s=>bnorm(s.name).replace(/ /g,'').includes(kc)));if(hit)return {name:label,store:hit.slurl}}
+ // Store brand anywhere in the product name: "*S.E.LELUTKA X ..." -> LeLutka store
+ // Text in brackets like (LeLutkaEVOX) only tells what it fits, so it does not count
+ const nc=bnorm(full.replace(/\([^)]*\)|\[[^\]]*(?:legacy|reborn|evox|evo x|lelutka|catwa|maitreya|kupra|ebody|fit)[^\]]*\]/gi,' ')).replace(/ /g,'');let best=null,len=0;
+ for(const s of importedStores){const sb=storeBrandName(s.name),sk=bnorm(sb).replace(/ /g,'');if(sk.length>=5&&sk.length>len&&nc.includes(sk)){best={name:sb,store:s.slurl};len=sk.length}}
+ return best}
 function renderStoreOptions(){const dl=$('storeOptions');dl.innerHTML='';importedStores.forEach(s=>{const o=document.createElement('option');o.value=s.slurl;o.label=s.name+(s.category?' ('+s.category+')':'');dl.append(o)});$('storeStatus').textContent=importedStores.length?importedStores.length+' imported stores. Brands whose name is in a store name are linked automatically; others: pick from the list in the store field.':'No stores imported yet.'}
 $('importStores').onclick=()=>{const list=parseStoreExport($('storeImport').value);if(!list.length){notify('No store lines found. Copy from UG-STORES v1 to UG-STORES END.');return}const byUrl=new Map(importedStores.map(s=>[s.slurl,s]));list.forEach(s=>byUrl.set(s.slurl,s));importedStores=[...byUrl.values()];try{localStorage.setItem(storeKey,JSON.stringify(importedStores))}catch{notify('Could not save stores in this browser')}$('storeImport').value='';renderStoreOptions();renderBrands();preview();notify(list.length+' stores imported')};
 $('clearStores').onclick=()=>{if(!confirm('Forget all imported stores? Store links you typed for brands are kept.'))return;importedStores=[];try{localStorage.removeItem(storeKey)}catch{}renderStoreOptions();preview()};
