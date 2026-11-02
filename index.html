@@ -135,6 +135,8 @@ try{importedStores=JSON.parse(localStorage.getItem(storeKey)||'[]');if(!Array.is
 // Firestorm shows SLURLs in chat as "REGION (x,y,z)", and that is what gets copied, so that form is read too.
 function parseStoreExport(raw){const out=[];for(let line of String(raw||'').split(/\r?\n/)){
  line=line.replace(/^\s*\[[\d:\s]+\]\s*[^:|]*:\s*/,'').replace(/^[^|:]*Studio Landmarks\s*:\s*/i,'').trim();
+ // Header from the HUD: "UG-STORES v1 · SHAPE: Celine"
+ const sh=line.match(/UG-STORES v1\W*SHAPE:\s*(.+)$/i);if(sh){out.shape=sh[1].trim();continue}
  const m=line.match(/^(.+?)\s*\|\s*(.*?)\s*\|\s*(.+?)\s*$/);if(!m)continue;
  const where=m[3];let slurl='';
  if(/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)\S+$/i.test(where))slurl=where;
@@ -153,7 +155,10 @@ function storeFor(e){const full=e.name||((e.designer||'')+' '+(e.product||''));c
  for(const s of importedStores){const sb=storeBrandName(s.name),sk=bnorm(sb).replace(/ /g,'');if(sk.length>=5&&sk.length>len&&nc.includes(sk)){best={name:sb,store:s.slurl};len=sk.length}}
  return best}
 function renderStoreOptions(){const dl=$('storeOptions');dl.innerHTML='';importedStores.forEach(s=>{const o=document.createElement('option');o.value=s.slurl;o.label=s.name+(s.category?' ('+s.category+')':'');dl.append(o)});$('storeStatus').textContent=importedStores.length?importedStores.length+' imported stores. Brands whose name is in a store name are linked automatically; others: pick from the list in the store field.':'No stores imported yet.'}
-$('importStores').onclick=()=>{const list=parseStoreExport($('storeImport').value);if(!list.length){notify('No store lines found. Copy from UG-STORES v1 to UG-STORES END.');return}const byUrl=new Map(importedStores.map(s=>[s.slurl,s]));list.forEach(s=>byUrl.set(s.slurl,s));importedStores=[...byUrl.values()];try{localStorage.setItem(storeKey,JSON.stringify(importedStores))}catch{notify('Could not save stores in this browser')}$('storeImport').value='';renderStoreOptions();renderBrands();preview();notify(list.length+' stores imported')};
+$('importStores').onclick=()=>{const list=parseStoreExport($('storeImport').value);if(!list.length){notify('No store lines found. Copy from UG-STORES v1 to UG-STORES END.');return}const byUrl=new Map(importedStores.map(s=>[s.slurl,s]));list.forEach(s=>byUrl.set(s.slurl,s));importedStores=[...byUrl.values()];try{localStorage.setItem(storeKey,JSON.stringify(importedStores))}catch{notify('Could not save stores in this browser')}$('storeImport').value='';
+ // Fill in the shape name from the export, unless it is just "Shape 1" etc.
+ if(list.shape&&!/^shape\s*\d+$/i.test(list.shape)){$('shape').value=list.shape}
+ renderStoreOptions();renderBrands();preview();notify(list.length+' stores imported'+(list.shape?' from '+list.shape:''))};
 $('clearStores').onclick=()=>{if(!confirm('Forget all imported stores? Store links you typed for brands are kept.'))return;importedStores=[];try{localStorage.removeItem(storeKey)}catch{}renderStoreOptions();preview()};
 renderStoreOptions();
 $('exportBrands').onclick=()=>download('my-brands.json',JSON.stringify({version:1,brands:myBrands},null,2),'application/json');
