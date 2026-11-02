@@ -133,7 +133,14 @@ $('nbAdd').onclick=()=>{const name=$('nbName').value.trim(),store=$('nbStore').v
 const storeKey='ug-stores-v1';let importedStores=[];
 try{importedStores=JSON.parse(localStorage.getItem(storeKey)||'[]');if(!Array.isArray(importedStores))importedStores=[]}catch{importedStores=[]}
 // Reads "name | category | SLURL" lines. Chat prefixes like "[18:22] U.G. - Studio Landmarks: " are removed.
-function parseStoreExport(raw){const out=[];for(let line of String(raw||'').split(/\r?\n/)){line=line.replace(/^\s*\[[\d:\s]+\]\s*[^:|]*:\s*/,'').trim();const m=line.match(/^(.+?)\s*\|\s*(.*?)\s*\|\s*((?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)\S+)\s*$/i);if(m)out.push({name:m[1].trim(),category:m[2].trim(),slurl:m[3]})}return out}
+// Firestorm shows SLURLs in chat as "REGION (x,y,z)", and that is what gets copied, so that form is read too.
+function parseStoreExport(raw){const out=[];for(let line of String(raw||'').split(/\r?\n/)){
+ line=line.replace(/^\s*\[[\d:\s]+\]\s*[^:|]*:\s*/,'').replace(/^[^|:]*Studio Landmarks\s*:\s*/i,'').trim();
+ const m=line.match(/^(.+?)\s*\|\s*(.*?)\s*\|\s*(.+?)\s*$/);if(!m)continue;
+ const where=m[3];let slurl='';
+ if(/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)\S+$/i.test(where))slurl=where;
+ else{const p=where.match(/^(.+?)\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);if(p)slurl='http://maps.secondlife.com/secondlife/'+encodeURIComponent(p[1].trim())+'/'+p[2]+'/'+p[3]+'/'+p[4]}
+ if(slurl)out.push({name:m[1].trim(),category:m[2].trim(),slurl})}return out}
 // Store for a product: the brand's own SLURL, or an imported landmark whose name contains the brand / designer
 function storeFor(e){const b=brandFor(e.name||((e.designer||'')+' '+(e.product||'')),e.designer);if(b&&b.store)return {name:b.name,store:b.store};const label=b?b.name:String(e.designer||'').replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim(),k=bnorm(label);if(k.length<3)return null;const hit=importedStores.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '));return hit?{name:label,store:hit.slurl}:null}
 function renderStoreOptions(){const dl=$('storeOptions');dl.innerHTML='';importedStores.forEach(s=>{const o=document.createElement('option');o.value=s.slurl;o.label=s.name+(s.category?' ('+s.category+')':'');dl.append(o)});$('storeStatus').textContent=importedStores.length?importedStores.length+' imported stores. Brands whose name is in a store name are linked automatically; others: pick from the list in the store field.':'No stores imported yet.'}
