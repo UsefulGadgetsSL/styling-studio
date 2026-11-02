@@ -5,7 +5,7 @@
 //   Optional variable ALLOWED_ORIGIN = https://usefulgadgetssl.github.io
 
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
-const CATS = ["Head", "Body", "Skin", "Eyes", "Hair", "Makeup", "Tattoo", "Blemishes", "Veins", "Moles", "Ears", "Clothing", "Shoes", "Jewelry", "Accessories", "Alpha", "Other"];
+const CATS = ["Shape", "Head", "Body", "Skin", "Brows", "Eyes", "Hair", "Makeup", "Tattoo", "Blemishes", "Veins", "Moles", "Ears", "Teeth", "Nails", "Clothing", "Shoes", "Jewelry", "Accessories", "Alpha", "Other"];
 
 const SYSTEM = `You read screenshots of the Firestorm (Second Life viewer) "Edit Outfit" / worn items list.
 Return JSON only: {"items":[{"name":"...","category":"...","confidence":"high|medium|low"}]}.
@@ -15,6 +15,16 @@ Rules:
 - Copy each product name exactly as written. Never invent or complete missing words.
 - category must be one of: ${CATS.join(", ")}.
 - If a name is hard to read, still include it but set confidence to "low".
+Second Life category guide:
+- Shape: the avatar shape, often named after a person or "Female Human"/"Male Human" (e.g. "*PKC* LeL EVO X Lieva - Female Human").
+- Head: mesh heads and their parts: LeLUTKA / "lel evox" / Avalon, Catwa, Genus ("/ HEAD / lel evox / AVALON 4.0").
+- Body: mesh bodies Legacy, Reborn, Maitreya, Kupra, eBODY, Inithium, Belleza ("Legacy (f) (1.7.1)", "Legacy (f) (Classic Fit)").
+- Teeth: teeth, gums, tongue ("/ GUMS / TEETH / lel evox 4.0"). Eyes: eyeballs/iris ("/ EYES / lel evox 4.0").
+- Brows: eyebrows. Nails: nails and nail polish. Hair: hair and hairbases.
+- Skin: skins and skin details such as forehead lines, wrinkles, lotion. A skin named "(Brows - ...)" is still Skin.
+- Veins: face or body veins. Blemishes / Moles / Tattoo / Ears as named.
+- Makeup: eyeliner, eyeshadow, lipstick, blush, lashes, freckles, bindi.
+- Words in brackets like (Legacy), [legacy/reborn], (EvoX) only tell which body or head it fits. They do not decide the category.
 - If there are no worn products, return {"items":[]}.`;
 
 const SCHEMA = {
