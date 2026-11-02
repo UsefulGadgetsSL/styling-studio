@@ -5,13 +5,43 @@
 <section id="library" class="hidden"><div class="card"><h2>Saved shapes</h2><p>Projects are saved only in this browser. Export backups before clearing browser data.</p><div class="actions"><button id="backup">Export entire library</button><label class="secondary" style="border:1px solid var(--line);padding:9px 13px;border-radius:9px;cursor:pointer">Import library JSON <input id="importLibrary" type="file" accept="application/json" style="display:none"></label></div><div id="libraryList" class="library"></div></div></section>
 <section id="settings" class="hidden"><div class="card"><h2>Accounts & publishing roadmap</h2><div class="settingsline"><strong>Current version</strong><p>Single-browser prototype. No sign-in, shared database, server, or Discord connection is active.</p></div><div class="settingsline"><strong>Phase 2 · User accounts</strong><p>Supabase Auth (email/password or magic link), unique user IDs, private profiles and secure sessions.</p></div><div class="settingsline"><strong>Phase 2 · Cloud storage</strong><p>Supabase Postgres with row-level security: users can only access their own shapes, cards and items. Optional private screenshot storage with deletion and retention controls.</p></div><div class="settingsline"><strong>Phase 3 · Discord</strong><p>Server-side endpoint or Edge Function sends cards to Discord. Never embed a Discord webhook or secret API key in the public webpage.</p></div><div class="settingsline"><strong>Phase 3 · OCR upgrade</strong><p>Optional server-side vision API for better item extraction, with user consent, usage quotas, rate limiting and cost controls.</p></div><div class="settingsline"><strong>Phase 4 · Second Life HUD</strong><p>Secure LSL-to-backend submission with signed requests and per-user linking; combine attachment scan with screenshot-based BOM recognition.</p></div><div class="notice">Before public launch: privacy policy, deletion/export controls, abuse protection, HTTPS hosting, billing limits and a proper authentication backend are required.</div></div></section><footer>Useful Gadgets © Styling Studio · Prototype · Not affiliated with Linden Lab</footer></main></div><div id="toast" class="toast"></div>
 <script>
-const $=id=>document.getElementById(id),cats=['Head','Body','Skin','Eyes','Hair','Makeup','Tattoo','Blemishes','Veins','Moles','Ears','Clothing','Shoes','Jewelry','Accessories','Alpha','Other'];let entries=[],screens=[],db=[];const key='ug-styling-studio-v1';try{db=JSON.parse(localStorage.getItem(key)||'[]')}catch{};
+const $=id=>document.getElementById(id),cats=['Shape','Head','Body','Skin','Brows','Eyes','Hair','Makeup','Tattoo','Blemishes','Veins','Moles','Ears','Teeth','Nails','Clothing','Shoes','Jewelry','Accessories','Alpha','Other'];let entries=[],screens=[],db=[];const key='ug-styling-studio-v1';try{db=JSON.parse(localStorage.getItem(key)||'[]')}catch{};
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const notify=s=>{const t=$('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2600)};
-function guess(s){let x=s.toLowerCase();if(/alpha|hover height/.test(x))return 'Alpha';if(/\bear(s)?\b/.test(x))return 'Ears';if(/\bmole(s)?\b/.test(x))return 'Moles';if(/blemish/.test(x))return 'Blemishes';if(/vein/.test(x))return 'Veins';if(/tattoo/.test(x))return 'Tattoo';if(/bindi|lipstick|eyeshadow|freckle|makeup/.test(x))return 'Makeup';if(/skin|celine skin/.test(x))return 'Skin';if(/eyes|iris/.test(x))return 'Eyes';if(/hair/.test(x))return 'Hair';if(/shoe|boot|heel/.test(x))return 'Shoes';if(/gown|dress|shirt|pants|jacket/.test(x))return 'Clothing';if(/necklace|ring|earring/.test(x))return 'Jewelry';if(/head/.test(x))return 'Head';if(/body/.test(x))return 'Body';return 'Other'}
-const knownDesigners=["THIS IS WRONG","Stray Dog","Izzie's","Izzie’s","theSkinnery","BeMia","Dernier","LeLUTKA","Maitreya","Legacy","Reborn"];
+// Category from the product name. Order matters: the most specific words are checked first.
+function guess(s){const x=s.toLowerCase(),
+ core=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' '); // without (Legacy) / [legacy/reborn] compatibility tags
+ if(/alpha|hover height/.test(x))return 'Alpha';
+ if(/\bshape\b|\b(?:female|male) human\b/.test(x))return 'Shape';
+ if(/teeth|gums|tongue/.test(x))return 'Teeth';
+ if(/\bnails?\b/.test(x))return 'Nails';
+ if(/\bears?\b/.test(x))return 'Ears';
+ if(/\bmoles?\b/.test(x))return 'Moles';
+ if(/blemish/.test(x))return 'Blemishes';
+ if(/vein/.test(x))return 'Veins';
+ if(/tattoo/.test(x))return 'Tattoo';
+ if(/\bskin\b/.test(x))return 'Skin';
+ if(/brow/.test(x))return 'Brows';
+ if(/eyeliner|liner|lipstick|\blips?\b|gloss|eyeshadow|shadow|blush|lashes|freckle|bindi|makeup|contour|highlight/.test(x))return 'Makeup';
+ if(/forehead|wrinkle|\blines\b|lotion|shine|skin ?tone/.test(x))return 'Skin';
+ if(/hair/.test(x))return 'Hair';
+ if(/\beyes?\b|iris/.test(x))return 'Eyes';
+ if(/shoe|sneaker|boot|heel|sandal|slipper|pump/.test(x))return 'Shoes';
+ if(/dress|gown|shirt|\btop\b|pants|sweatpants|jeans|skirt|jacket|hoodie|sweater|cardigan|coat|shorts|leggings|bra\b|panties|lingerie|bikini|outfit/.test(x))return 'Clothing';
+ if(/necklace|earring|\brings?\b|bracelet|piercing|choker|anklet/.test(x))return 'Jewelry';
+ if(/glasses|\bbag\b|purse|\bhat\b|\bcap\b|\bwatch\b|scarf|gloves/.test(x))return 'Accessories';
+ if(/\bhead\b|lelutka|lel ?evo|avalon|catwa|genus/.test(core))return 'Head';
+ if(/\bbody\b|legacy|reborn|maitreya|\blara\b|kupra|ebody|inithium|belleza|freya/.test(core))return 'Body';
+ return 'Other'}
+const knownDesigners=["THIS IS WRONG","Stray Dog","Izzie's","Izzie’s","theSkinnery","BeMia","Dernier","LeLUTKA","Maitreya","Legacy","Reborn","Angel Eyes","Metallurgy","Avarosa","Tresbeau","Crimen","Doux","Stealthic","Truth","Sintiklia","Wasabi","Magika","Catwa","Genus","Kupra","eBODY","Belleza","Inithium","Glam Affair","Pumec"];
 function splitDesigner(name){
   const raw=String(name||'').trim();
-  const match=knownDesigners.find(d=>raw.toLowerCase().startsWith(d.toLowerCase()));
+  // Brand at the start in brackets or stars: {HIME*DREAM} ..., [avarosa] ..., *PKC* ...
+  const br=raw.match(/^(\{[^}]{2,30}\}|\[[^\]]{2,30}\]|\*[^*]{2,30}\*)\s*(.+)$/);
+  if(br)return {designer:br[1],product:br[2].replace(/^[\s\-–—:|]+/,'').trim()};
+  // Brand ending with a dot: "tresbeau. ...", "nova. ..."
+  const dot=raw.match(/^([A-Za-z0-9&'’]{2,20}\.)\s+(.+)$/);
+  if(dot)return {designer:dot[1],product:dot[2]};
+  const match=knownDesigners.find(d=>raw.toLowerCase().startsWith(d.toLowerCase())&&!/[a-z0-9]/i.test(raw.charAt(d.length)));
   if(!match)return {designer:'',product:raw};
   let rest=raw.slice(match.length).replace(/^[\s.\-–—:|]+/,'').trim();
   return {designer:match.replace('Izzie’s',"Izzie's"),product:rest||raw};
@@ -36,7 +66,8 @@ function importOutfitReport(raw){
   // The last brace group is creator metadata. Earlier braces may be part of the brand.
   const match=[...line.matchAll(/\{([^{}]*)\}/g)];
   if(match.length){const last=match[match.length-1];if(last.index+last[0].length===line.length)line=(line.slice(0,last.index)+line.slice(last.index+last[0].length)).trim()}
-  line=line.replace(/^\s*(?:\[[^\]]+\]\s*)+/,'').trim();
+  // Remove scanner tags like [BODY] or [HAIR], but keep brand names like [avarosa]
+  line=line.replace(/^\s*(?:\[[A-Z0-9 &\/]+\]\s*)+/,'').trim();
   if(line.length<4){skipped++;continue}
   const normalized=normalize(line);
   if(entries.some(e=>normalize(e.name||((e.designer||'')+' '+(e.product||'')))===normalized)){skipped++;continue}
@@ -81,7 +112,7 @@ function imageData(file){return new Promise((resolve,reject)=>{const img=new Ima
 $('aiScan').onclick=async()=>{if(!screens.length){notify('Choose screenshots first');return}const endpoint=$('aiEndpoint').value.trim();if(!/^https:\/\/[a-z0-9.-]+(?:\/.*)?$/i.test(endpoint)){notify('Configure an HTTPS AI endpoint first');return}if(screens.length>3){notify('Select up to 3 screenshots for AI scan');return}
 const button=$('aiScan');button.disabled=true;$('scanStatus').textContent='Analyzing screenshots with AI…';
 try{const images=await Promise.all(screens.map(imageData));const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images})});const result=await response.json();if(!response.ok)throw Error(result.error||'Request failed');if(!Array.isArray(result.items))throw Error('Invalid AI response');
-let added=0;for(const item of result.items){if(!item||typeof item.name!=='string'||item.name.trim().length<3)continue;const name=item.name.trim();if(/not\s+w[o0](rn|m)|styling studio|card style|review items/i.test(name))continue;const prev=entries.length;append(name,true);if(entries.length===prev)continue;const e=entries[entries.length-1];if(cats.includes(item.category))e.cat=item.category;e.yes=item.confidence==='high'&&e.cat!=='Other'&&e.cat!=='Alpha';added++}render();$('scanStatus').textContent=added+' item(s) imported. Review unchecked or uncertain results.';notify('AI scan complete')}catch(e){$('scanStatus').textContent='AI scan failed: '+e.message}finally{button.disabled=false}};
+let added=0;for(const item of result.items){if(!item||typeof item.name!=='string'||item.name.trim().length<3)continue;const name=item.name.trim();if(/not\s+w[o0](rn|m)|styling studio|card style|review items/i.test(name))continue;const prev=entries.length;append(name,true);if(entries.length===prev)continue;const e=entries[entries.length-1];if(e.cat==='Other'&&cats.includes(item.category))e.cat=item.category;e.yes=item.confidence==='high'&&e.cat!=='Other'&&e.cat!=='Alpha';added++}render();$('scanStatus').textContent=added+' item(s) imported. Review unchecked or uncertain results.';notify('AI scan complete')}catch(e){$('scanStatus').textContent='AI scan failed: '+e.message}finally{button.disabled=false}};
 function download(name,content,type='text/plain'){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=name.replace(/[^a-z0-9._-]/gi,'_');a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(cardText());notify('Card copied')}catch{notify('Clipboard unavailable: use Download .txt')}};$('txt').onclick=()=>download(($('shape').value||'styling-card')+'.txt',cardText());function project(){return{id:crypto.randomUUID?.()||String(Date.now()),shape:$('shape').value.trim()||'Untitled Shape',brand:$('brand').value,notes:$('notes').value,items:entries.map(e=>({...e})),updated:new Date().toISOString()}}$('json').onclick=()=>download(($('shape').value||'project')+'.json',JSON.stringify(project(),null,2),'application/json');$('save').onclick=()=>{let p=project();db.unshift(p);try{localStorage.setItem(key,JSON.stringify(db));notify('Saved to local library')}catch{db.shift();notify('Browser storage full — export your project instead')}renderLibrary()};
 function loadProject(p){$('shape').value=p.shape||'';$('brand').value=p.brand||'';$('notes').value=p.notes||'';entries=Array.isArray(p.items)?p.items.map(x=>normalizeEntry({...x})):[];render();page('studio')};function renderLibrary(){let root=$('libraryList');root.innerHTML='';db.forEach((p,i)=>{let el=document.createElement('div');el.className='saved';let title=document.createElement('strong');title.textContent=p.shape;let sub=document.createElement('p');sub.textContent=(p.brand||'')+' · '+(p.items?.length||0)+' items';let open=document.createElement('button');open.textContent='Open';open.onclick=()=>loadProject(p);let del=document.createElement('button');del.textContent='Delete';del.className='danger';del.style.marginLeft='8px';del.onclick=()=>{if(!confirm('Delete this saved project?'))return;db.splice(i,1);localStorage.setItem(key,JSON.stringify(db));renderLibrary()};el.append(title,sub,open,del);root.append(el)});if(!db.length)root.textContent='No saved shapes yet.'}$('backup').onclick=()=>download('useful-gadgets-library.json',JSON.stringify(db,null,2),'application/json');$('importLibrary').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let arr=JSON.parse(await f.text());if(!Array.isArray(arr)||!arr.every(x=>x&&Array.isArray(x.items)))throw Error('Invalid library');db=[...arr,...db];localStorage.setItem(key,JSON.stringify(db));renderLibrary();notify('Library imported')}catch{notify('Invalid JSON library file')}};
 function page(p){['studio','library','settings'].forEach(s=>$(s).classList.toggle('hidden',s!==p));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));$('pageTitle').textContent={studio:'Styling Studio',library:'Shape Library',settings:'Settings & Accounts'}[p];$('pageSubtitle').textContent={studio:'Turn Firestorm outfit screenshots into polished styling cards.',library:'Your saved styling projects in one place.',settings:'Roadmap for secure multi-user publishing.'}[p];if(p==='library')renderLibrary()}document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>page(b.dataset.page));render();
