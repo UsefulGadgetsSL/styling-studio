@@ -62,7 +62,19 @@ function splitDesigner(name){
   let rest=raw.slice(match.length).replace(/^[\s.\-–—:|]+/,'').trim();
   return {designer:match.replace('Izzie’s',"Izzie's"),product:rest||raw};
 }
-function append(name,fromOCR=false){name=name.trim();if(!name||entries.some(e=>(e.name||((e.designer||'')+' '+(e.product||''))).toLowerCase()===name.toLowerCase()))return;const parts=splitDesigner(name),cat=guess(name);entries.push({name,designer:parts.designer,product:parts.product,cat,yes:!(/alpha|not found|no.match|hover height/i.test(name))&&!(fromOCR&&cat==='Other')})}
+// Parts that come with a mesh head or body (teeth, gums, eyeballs, hands, feet ...) and HUDs/tools.
+// They are not needed on a styling card, so they start unchecked.
+function isMeshPart(name){const x=String(name||'').toLowerCase();
+ if(/lsl bridge|outfit scanner|studio landmarks|landmark manager|what is she wearing|\(hud\)|\bhud\b.*\((?:center|top|bottom|left|right)[^)]*\)$/.test(x))return true;
+ // LeLUTKA style parts: "/ GUMS / TEETH / lel evox 4.0", "/ EYES / lel evox", "/ HUD / lel evox"
+ if(/^\s*\/\s*(?:gums|teeth|tongue|eyes|hud|lashes|neck|ears)\b/.test(x))return true;
+ // Legacy style parts: "[FEET] Legacy", "[HANDS] Legacy" ([BODY] and [HEAD] stay)
+ if(/^\s*\[(?:feet|hands|neck|nails|nipples)\]/.test(x))return true;
+ const head=/\b(?:lel|lelutka|evox|evo x|catwa|genus|avalon|akeruka)\b/,body=/\b(?:legacy|maitreya|lara|reborn|kupra|ebody|inithium|belleza|freya|isis|venus|meshbody)\b/;
+ if(head.test(x)&&/\b(?:teeth|gums|tongue|jaw|eyeballs?)\b/.test(x)&&!/\b(?:skin|tattoo|makeup|lipstick|blush|liner)\b/.test(x))return true;
+ if(body.test(x)&&/\b(?:hands?|feet|foot|neck)\b/.test(x)&&!/\b(?:nails?|shoes?|boots?|sandals?|heels?|gloves?|rings?|bracelets?|socks?|tattoo|skin)\b/.test(x))return true;
+ return false}
+function append(name,fromOCR=false){name=name.trim();if(!name||entries.some(e=>(e.name||((e.designer||'')+' '+(e.product||''))).toLowerCase()===name.toLowerCase()))return;const parts=splitDesigner(name),cat=guess(name);entries.push({name,designer:parts.designer,product:parts.product,cat,yes:!(/alpha|not found|no.match|hover height/i.test(name))&&!(fromOCR&&cat==='Other')&&!isMeshPart(name)})}
 function importOutfitReport(raw){
  const groupMap={body:'Body',clothes:'Clothing',clothing:'Clothing',shoes:'Shoes',hair:'Hair',jewelry:'Jewelry',accessories:'Accessories',other:'Other'};
  let group='Other',added=0,skipped=0;
@@ -82,6 +94,8 @@ function importOutfitReport(raw){
   // The last brace group is creator metadata. Earlier braces may be part of the brand.
   const match=[...line.matchAll(/\{([^{}]*)\}/g)];
   if(match.length){const last=match[match.length-1];if(last.index+last[0].length===line.length)line=(line.slice(0,last.index)+line.slice(last.index+last[0].length)).trim()}
+  // Mesh head/body parts like [FEET] Legacy are checked before the [FEET] tag is removed
+  const meshPart=isMeshPart(line);
   // Remove scanner tags like [BODY] or [HAIR], but keep brand names like [avarosa]
   line=line.replace(/^\s*(?:\[[A-Z0-9 &\/]+\]\s*)+/,'').trim();
   if(line.length<4){skipped++;continue}
@@ -89,7 +103,7 @@ function importOutfitReport(raw){
   if(entries.some(e=>normalize(e.name||((e.designer||'')+' '+(e.product||'')))===normalized)){skipped++;continue}
   const parts=splitDesigner(line);
   const category=group==='Body'?guess(line):group;
-  entries.push({name:line,designer:parts.designer,product:parts.product,cat:category==='Other'?'Other':category,yes:true});
+  entries.push({name:line,designer:parts.designer,product:parts.product,cat:category==='Other'?'Other':category,yes:!meshPart&&!isMeshPart(line)});
   added++;
  }
  return {added,skipped};
@@ -248,7 +262,7 @@ function imageData(file){return new Promise((resolve,reject)=>{const img=new Ima
 $('aiScan').onclick=async()=>{if(!screens.length){notify('Choose screenshots first');return}const endpoint=$('aiEndpoint').value.trim()||defaultEndpoint;if(!/^https:\/\/[a-z0-9.-]+(?:\/.*)?$/i.test(endpoint)){notify('Configure an HTTPS AI endpoint first');return}if(screens.length>3){notify('Select up to 3 screenshots for AI scan');return}
 const button=$('aiScan');button.disabled=true;$('scanStatus').textContent='Analyzing screenshots with AI…';
 try{const images=await Promise.all(screens.map(imageData));const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images})});const result=await response.json();if(!response.ok)throw Error(result.error||'Request failed');if(!Array.isArray(result.items))throw Error('Invalid AI response');
-let added=0;for(const item of result.items){if(!item||typeof item.name!=='string'||item.name.trim().length<3)continue;const name=item.name.trim();if(/not\s+w[o0](rn|m)|styling studio|card style|review items/i.test(name))continue;const prev=entries.length;append(name,true);if(entries.length===prev)continue;const e=entries[entries.length-1];if(e.cat==='Other'&&cats.includes(item.category))e.cat=item.category;e.yes=item.confidence==='high'&&e.cat!=='Other'&&e.cat!=='Alpha';added++}render();$('scanStatus').textContent=added+' item(s) imported. Review unchecked or uncertain results.';notify('AI scan complete')}catch(e){$('scanStatus').textContent='AI scan failed: '+e.message}finally{button.disabled=false}};
+let added=0;for(const item of result.items){if(!item||typeof item.name!=='string'||item.name.trim().length<3)continue;const name=item.name.trim();if(/not\s+w[o0](rn|m)|styling studio|card style|review items/i.test(name))continue;const prev=entries.length;append(name,true);if(entries.length===prev)continue;const e=entries[entries.length-1];if(e.cat==='Other'&&cats.includes(item.category))e.cat=item.category;e.yes=item.confidence==='high'&&e.cat!=='Other'&&e.cat!=='Alpha'&&!isMeshPart(name);added++}render();$('scanStatus').textContent=added+' item(s) imported. Review unchecked or uncertain results.';notify('AI scan complete')}catch(e){$('scanStatus').textContent='AI scan failed: '+e.message}finally{button.disabled=false}};
 function download(name,content,type='text/plain'){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=name.replace(/[^a-z0-9._-]/gi,'_');a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(cardText());notify('Card copied')}catch{notify('Clipboard unavailable: use Download .txt')}};$('txt').onclick=()=>download(($('shape').value||'styling-card')+'.txt',cardText());function project(){return{id:crypto.randomUUID?.()||String(Date.now()),shape:$('shape').value.trim()||'Untitled Shape',brand:$('brand').value,notes:$('notes').value,items:entries.map(e=>({...e})),updated:new Date().toISOString()}}$('json').onclick=()=>download(($('shape').value||'project')+'.json',JSON.stringify(project(),null,2),'application/json');$('save').onclick=()=>{let p=project();db.unshift(p);try{localStorage.setItem(key,JSON.stringify(db));notify('Saved to local library')}catch{db.shift();notify('Browser storage full — export your project instead')}renderLibrary()};
 function loadProject(p){$('shape').value=p.shape||'';$('brand').value=p.brand||'';$('notes').value=p.notes||'';entries=Array.isArray(p.items)?p.items.map(x=>normalizeEntry({...x})):[];render();page('studio')};function renderLibrary(){let root=$('libraryList');root.innerHTML='';db.forEach((p,i)=>{let el=document.createElement('div');el.className='saved';let title=document.createElement('strong');title.textContent=p.shape;let sub=document.createElement('p');sub.textContent=(p.brand||'')+' · '+(p.items?.length||0)+' items';let open=document.createElement('button');open.textContent='Open';open.onclick=()=>loadProject(p);let del=document.createElement('button');del.textContent='Delete';del.className='danger';del.style.marginLeft='8px';del.onclick=()=>{if(!confirm('Delete this saved project?'))return;db.splice(i,1);localStorage.setItem(key,JSON.stringify(db));renderLibrary()};el.append(title,sub,open,del);root.append(el)});if(!db.length)root.textContent='No saved shapes yet.'}$('backup').onclick=()=>download('useful-gadgets-library.json',JSON.stringify(db,null,2),'application/json');$('importLibrary').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let arr=JSON.parse(await f.text());if(!Array.isArray(arr)||!arr.every(x=>x&&Array.isArray(x.items)))throw Error('Invalid library');db=[...arr,...db];localStorage.setItem(key,JSON.stringify(db));renderLibrary();notify('Library imported')}catch{notify('Invalid JSON library file')}};
 function page(p){['studio','library','settings'].forEach(s=>$(s).classList.toggle('hidden',s!==p));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));$('pageTitle').textContent={studio:'Styling Studio',library:'Shape Library',settings:'Settings & Accounts'}[p];$('pageSubtitle').textContent={studio:'Turn Firestorm outfit screenshots into polished styling cards.',library:'Your saved styling projects in one place.',settings:'Roadmap for secure multi-user publishing.'}[p];if(p==='library')renderLibrary()}document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>page(b.dataset.page));render();
