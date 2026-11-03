@@ -135,12 +135,12 @@ $('count').textContent=entries.filter(e=>e.yes).length+' included / '+entries.le
 // ---- Tidy names on the card (the fields in the list are not changed) ----
 // Tags like (LeLutkaEVOX), [legacy/reborn], (Evo X BOM) only tell what it fits
 const fitTag=/^(?:lelutka|lel|evox|evo|x|legacy|reborn|catwa|maitreya|kupra|ebody|inithium|belleza|genus|avalon|bom|fit|fitted|f|m|mesh|meshbody|body|head|classic|perky|curvy|slim|petite|and|for)+$/;
-function tidyBrand(d){let s=String(d||'').replace(/_/g,' ').replace(/^[\s\[{(*:~.\-–—|•]+|[\s\]})*:~\-–—|•]+$/g,'').replace(/\s+/g,' ').trim();if(!s)return '';
+function tidyBrand(d){let s=String(d||'').replace(/_/g,' ').replace(/^[\s\[{(*:~.\-–—|•#+]+|[\s\]})*:~\-–—|•]+$/g,'').replace(/\s+/g,' ').trim();if(!s)return '';
  const k=bnorm(s).replace(/ /g,''),b=allBrands().find(x=>bnorm(x.name).replace(/ /g,'')===k);
  if(b){let n=b.name.trim();if(s.endsWith('.')&&!n.endsWith('.'))n+='.';return n}return s}
 function tidyProduct(p){let s=String(p||'').replace(/_/g,' ');
  s=s.replace(/\s*[(\[]([^)\]]*)[)\]]/g,(m,inner)=>{const c=inner.toLowerCase().replace(/[^a-z]/g,'');return c&&fitTag.test(c)?' ':m});
- s=s.replace(/\s+/g,' ').replace(/(\s[-–—|:]\s?)+(?=[-–—|:]\s)/g,' ').replace(/^[\s\-–—|:*.~•]+|[\s\-–—|:*~•]+$/g,'').trim();
+ s=s.replace(/\s+/g,' ').replace(/(\s[-–—|:]\s?)+(?=[-–—|:]\s)/g,' ').replace(/^[\s\-–—|:*.~•#+]+|[\s\-–—|:*~•]+$/g,'').trim();
  const L=s.match(/[A-Za-z]/g)||[],U=s.match(/[A-Z]/g)||[];
  // ALL CAPS NAMES -> Title Case (short codes like BBH stay)
  if(L.length>10&&U.length/L.length>0.8)s=s.replace(/[A-Za-z][A-Za-z']*/g,w=>w.length<=3?w:w.charAt(0)+w.slice(1).toLowerCase());
@@ -227,8 +227,10 @@ function storeFor(e){const full=e.name||((e.designer||'')+' '+(e.product||''));c
  if(k.length>=3){const hit=pool.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '))||(kc.length>=5&&pool.find(s=>bnorm(s.name).replace(/ /g,'').includes(kc)));if(hit)return {name:label,store:hit.slurl}}
  // Product name starts with the store name: "Believe - Lace Dress" -> Believe
  // Short names ("RED", "LAP") must be followed by a separator: "RED - Dress" yes, "Red Dress" no
- const fn=bnorm(full),raw0=String(full).replace(/^[\s\[{(*:~.]+/,'');let pre=null,plen=0;
- for(const s of pool){const sb=storeBrandName(s.name),sk=bnorm(sb);if(sk.length<3||sk.length<=plen||!(fn===sk||fn.startsWith(sk+' ')))continue;
+ const fn=bnorm(full),raw0=String(full).replace(/^[\s\[{(*:~.#+]+/,'');let pre=null,plen=0;
+ // My own landmarks are often "Brand Something" ("Crimen Forever"): the first word counts too
+ const cands=[];for(const s of pool){cands.push([storeBrandName(s.name),s]);if(importedStores.includes(s)){const fw=bnorm(storeBrandName(s.name)).split(' ')[0];if(fw&&fw.length>=5&&fw!==bnorm(storeBrandName(s.name))&&!/^(?:fashion|beauty|hairs?|skins?|malls?|plaza|homes?|house|city|island|studio|studios|designs?|couture|boutique|market|events?|sales?|world|lands?|gallery|garden|clubs?|shopping|outlet|store|stores|mainstore|black|white|pink|sweet|little|happy|dream|dreams|magic|royal|urban|style|styles)$/.test(fw))cands.push([fw,s])}}
+ for(const [sb,s] of cands){const sk=bnorm(sb);if(sk.length<3||sk.length<=plen||!(fn===sk||fn.startsWith(sk+' ')))continue;
   if(sk.replace(/ /g,'').length<6){const words=sk.split(' ').map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^a-z0-9]+');if(!new RegExp('^'+words+'\\s*(?:[-–—|:_.\\]})*]|\'s\\b|$)','i').test(raw0))continue}
   pre={name:sb,store:s.slurl};plen=sk.length}
  if(pre)return pre;
