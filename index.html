@@ -270,11 +270,17 @@ if(custom('sign'))out.push(t.divider,custom('sign'));
 if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio');
 return out.join(String.fromCharCode(10))}
 const heart=style==='soft'?'♡ ':style==='classic'?'• ':'';
-let out=style==='minimal'?[brand.toUpperCase(),'STYLING CARD — '+shape.toUpperCase(),'']:[brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD','────────────────────────',''];
+const custom=k=>fillText(cardTexts[k],brand,shape);
+const rule='────────────────────────';
+let out=style==='minimal'?[brand.toUpperCase(),'STYLING CARD — '+shape.toUpperCase(),'']:[brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',rule,''];
+if(custom('intro'))out.push(custom('intro'),'');
+out.push('SHAPE: '+shape,'');
 cats.forEach(cat=>{let a=entries.filter(e=>e.yes&&e.cat===cat);if(a.length){out.push(cat.toUpperCase(),'');
 a.forEach(e=>{const line=itemLine(e);if(line){out.push(heart+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('   ↳ '+s.store)}}});out.push('')}});
-if(notes)out.push('NOTES',notes,'');
-if($('credit').checked)out.push('────────────────────────','Created with Useful Gadgets Styling Studio');
+if(notes)out.push(rule,'SHAPE NOTES',notes,'');
+for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(rule,heading,'',custom(key),'')}
+if(custom('sign'))out.push(rule,custom('sign'));
+if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio');
 return out.join(String.fromCharCode(10))}
 function preview(){$('preview').textContent=cardText()};['shape','brand','notes','cardStyle','credit','storeLinks','tidyNames'].forEach(id=>$(id).addEventListener('input',preview));['storeLinks','tidyNames','credit','cardStyle'].forEach(id=>$(id).addEventListener('change',preview));
 // Card texts: fill the boxes, save on every change
