@@ -14,6 +14,8 @@
 //   GET  /stores      -> {stores:[{name,shape,slurl}]}  my private stores
 //   POST /lsl/code    (HUD) -> "CODE ABC123"   new login code, valid 10 minutes
 //   POST /lsl/sync    (HUD) lines "name|shape|slurl", first line "RESET" = replace all
+//   POST /lsl/scan    (HUD) lines "name|creator", first line "NEW" (new scan) or "MORE" (rest of it)
+//   GET  /scans/latest -> {created, items:[{name,creator}]}  my latest outfit scan
 
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 const CATS = ["Shape", "Head", "Body", "Skin", "Brows", "Eyes", "Hair", "Makeup", "Tattoo", "Blemishes", "Veins", "Moles", "Ears", "Teeth", "Nails", "Clothing", "Shoes", "Jewelry", "Accessories", "Alpha", "Other"];
@@ -131,7 +133,8 @@ async function ensureTables(env) {
   await env.DB.batch([
     env.DB.prepare("CREATE TABLE IF NOT EXISTS codes (code TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, expires INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, created INTEGER NOT NULL)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS stores (owner_key TEXT NOT NULL, name TEXT NOT NULL, shape TEXT, slurl TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (owner_key, name, slurl))")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS stores (owner_key TEXT NOT NULL, name TEXT NOT NULL, shape TEXT, slurl TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (owner_key, name, slurl))"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS scans (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_key TEXT NOT NULL, created INTEGER NOT NULL, items TEXT NOT NULL)")
   ]);
   tablesReady = true;
 }
@@ -194,6 +197,32 @@ async function handleHud(request, env, path) {
     const total = (await env.DB.prepare("SELECT COUNT(*) AS c FROM stores WHERE owner_key = ?").bind(owner).first()).c;
     return text("SYNCED " + added + " " + total);
   }
+
+  // Outfit scan from the HUD (🔍 SCAN ME). Only my own attachments; only the last 5 scans are kept.
+  if (path === "/lsl/scan") {
+    const lines = (await request.text()).split("\n").map(l => l.trim()).filter(Boolean).slice(0, 120);
+    const first = lines.shift();
+    const items = [];
+    for (const l of lines) {
+      const p = l.split("|");
+      const name = (p[0] || "").trim().slice(0, 120);
+      const creator = (p[1] || "").trim().slice(0, 80);
+      if (name.length >= 2) items.push(creator ? { name, creator } : { name });
+    }
+    if (first === "NEW") {
+      await env.DB.prepare("INSERT INTO scans (owner_key, created, items) VALUES (?, ?, ?)").bind(owner, now, JSON.stringify(items)).run();
+      await env.DB.prepare("DELETE FROM scans WHERE owner_key = ? AND id NOT IN (SELECT id FROM scans WHERE owner_key = ? ORDER BY id DESC LIMIT 5)").bind(owner, owner).run();
+      return text("SCANNED " + items.length);
+    }
+    if (first === "MORE") {
+      const last = await env.DB.prepare("SELECT id, items FROM scans WHERE owner_key = ? AND created > ? ORDER BY id DESC LIMIT 1").bind(owner, now - 5 * 60000).first();
+      if (!last) return text("no scan to add to", 409);
+      const all = JSON.parse(last.items || "[]").concat(items).slice(0, 300);
+      await env.DB.prepare("UPDATE scans SET items = ? WHERE id = ?").bind(JSON.stringify(all), last.id).run();
+      return text("SCANNED " + items.length);
+    }
+    return text("bad scan", 400);
+  }
   return text("not found", 404);
 }
 
@@ -229,7 +258,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers });
 
     // --- account ---
-    if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores") {
+    if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores" || path === "/scans/latest") {
       if (!env.DB) return reply({ error: "Database (DB) is not connected yet" }, 503);
       await ensureTables(env);
       if (path === "/auth/pair") {
@@ -258,6 +287,11 @@ export default {
       if (path === "/stores") {
         const r = await env.DB.prepare("SELECT name, shape, slurl, updated FROM stores WHERE owner_key = ? ORDER BY updated DESC LIMIT ?").bind(s.owner_key, MAX_STORES).all();
         return reply({ stores: r.results || [] });
+      }
+      if (path === "/scans/latest") {
+        const row = await env.DB.prepare("SELECT created, items FROM scans WHERE owner_key = ? ORDER BY id DESC LIMIT 1").bind(s.owner_key).first();
+        if (!row) return reply({ created: 0, items: [] });
+        return reply({ created: row.created, items: JSON.parse(row.items || "[]") });
       }
     }
 
