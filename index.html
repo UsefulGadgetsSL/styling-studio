@@ -261,11 +261,13 @@ const themes={
  boutique:{top:'◇ ───────────── ◇',heading:'',item:'· ',divider:'────────────────'}
 };
 const t=themes[style];
-if(t){let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];
+if(t){const custom=k=>fillText(cardTexts[k],brand,shape);let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];if(custom('intro'))out.push(custom('intro'),'');out.push(t.heading+'SHAPE: '+shape,'');
 cats.forEach(cat=>{const a=entries.filter(e=>e.yes&&e.cat===cat);if(!a.length)return;out.push(t.heading+cat.toUpperCase(),'');
 a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('   ↳ '+s.store)}});out.push('')});
-if(notes)out.push(t.divider,'NOTES',notes,'');
-if($('credit').checked)out.push(t.divider,'Created with Useful Gadgets Styling Studio');
+if(notes)out.push(t.divider,'SHAPE NOTES',notes,'');
+for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(t.divider,t.heading+heading,'',custom(key),'')}
+if(custom('sign'))out.push(t.divider,custom('sign'));
+if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio');
 return out.join(String.fromCharCode(10))}
 const heart=style==='soft'?'♡ ':style==='classic'?'• ':'';
 let out=style==='minimal'?[brand.toUpperCase(),'STYLING CARD — '+shape.toUpperCase(),'']:[brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD','────────────────────────',''];
