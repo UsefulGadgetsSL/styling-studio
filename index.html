@@ -201,8 +201,11 @@ function storeFor(e){const full=e.name||((e.designer||'')+' '+(e.product||''));c
  const pool=storePool();
  if(k.length>=3){const hit=pool.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '))||(kc.length>=5&&pool.find(s=>bnorm(s.name).replace(/ /g,'').includes(kc)));if(hit)return {name:label,store:hit.slurl}}
  // Product name starts with the store name: "Believe - Lace Dress" -> Believe
- const fn=bnorm(full);let pre=null,plen=0;
- for(const s of pool){const sk=bnorm(storeBrandName(s.name));if(sk.length>=3&&sk.length>plen&&(fn===sk||fn.startsWith(sk+' '))){pre={name:storeBrandName(s.name),store:s.slurl};plen=sk.length}}
+ // Short names ("RED", "LAP") must be followed by a separator: "RED - Dress" yes, "Red Dress" no
+ const fn=bnorm(full),raw0=String(full).replace(/^[\s\[{(*:~.]+/,'');let pre=null,plen=0;
+ for(const s of pool){const sb=storeBrandName(s.name),sk=bnorm(sb);if(sk.length<3||sk.length<=plen||!(fn===sk||fn.startsWith(sk+' ')))continue;
+  if(sk.replace(/ /g,'').length<6){const words=sk.split(' ').map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^a-z0-9]+');if(!new RegExp('^'+words+'\\s*(?:[-–—|:_.\\]})*]|\'s\\b|$)','i').test(raw0))continue}
+  pre={name:sb,store:s.slurl};plen=sk.length}
  if(pre)return pre;
  // Store brand anywhere in the product name: "*S.E.LELUTKA X ..." -> LeLutka store.
  // Only my own stores and bank stores marked "anywhere" (store names like "Believe" are normal words)
