@@ -22,8 +22,12 @@ function guess(s){const b=brandFor(s),x=s.toLowerCase(),
  core=x.replace(/\([^)]*\)|\[[^\]]*\]/g,' '); // without (Legacy) / [legacy/reborn] compatibility tags
  if(/alpha|hover height/.test(x))return 'Alpha';
  if(/\bshape\b|\b(?:female|male) human\b/.test(x))return 'Shape';
- // Brands that only make one kind of product
- if(b&&b.category&&b.category!=='Head'&&b.category!=='Body'&&cats.includes(b.category))return b.category;
+ // Clear product words win over the brand's usual category (a shape maker can also make earrings)
+ if(/necklace|earring|bracelet|piercing|choker|anklet/.test(x))return 'Jewelry';
+ if(/shoe|sneaker|\bboots?\b|\bheels?\b|sandal|slipper|\bpumps?\b/.test(x))return 'Shoes';
+ if(/\bdress|\bgown|\bpants\b|sweatpants|\bjeans\b|\bskirt|\bjacket|\bhoodie|\bsweater|cardigan|\bcoat\b|leggings|lingerie|bikini/.test(x))return 'Clothing';
+ // Brands that only make one kind of product (never Shape: shapes are found by the words above)
+ if(b&&b.category&&b.category!=='Head'&&b.category!=='Body'&&b.category!=='Shape'&&cats.includes(b.category))return b.category;
  if(/teeth|gums|tongue/.test(x))return 'Teeth';
  if(/\bnails?\b/.test(x))return 'Nails';
  if(/\bears?\b/.test(x))return 'Ears';
@@ -194,7 +198,7 @@ function upsertBrand(name,patch){const k=bnorm(name);if(!k)return;let b=myBrands
 const okStore=s=>!s||/^(https?:\/\/(maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)/i.test(s);
 // Re-check items in "Other" after the brand list changed
 function recheck(){entries.forEach(e=>{normalizeEntry(e);if(e.cat==='Other'){const c=guess(e.name||((e.designer||'')+' '+(e.product||'')));if(c!=='Other')e.cat=c}if(!e.designer){const p=splitDesigner(e.name||'');if(p.designer){e.designer=p.designer;e.product=p.product}}});render()}
-function offerRemember(e){const d=(e.designer||'').trim();if(!d||e.cat==='Other'||e.cat==='Alpha')return;const name=d.replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim()||d,known=brandFor(name,name);if(known&&known.category===e.cat)return;pendingBrand={name,category:e.cat};$('rememberText').textContent='Remember that '+name+' makes '+e.cat+'?';$('remember').classList.remove('hidden');clearTimeout(offerRemember.t);offerRemember.t=setTimeout(()=>$('remember').classList.add('hidden'),15000)}
+function offerRemember(e){const d=(e.designer||'').trim();if(!d||e.cat==='Other'||e.cat==='Alpha'||e.cat==='Shape')return;const name=d.replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim()||d,known=brandFor(name,name);if(known&&known.category===e.cat)return;pendingBrand={name,category:e.cat};$('rememberText').textContent='Remember that '+name+' makes '+e.cat+'?';$('remember').classList.remove('hidden');clearTimeout(offerRemember.t);offerRemember.t=setTimeout(()=>$('remember').classList.add('hidden'),15000)}
 $('rememberYes').onclick=()=>{if(pendingBrand){upsertBrand(pendingBrand.name,{category:pendingBrand.category});notify(pendingBrand.name+' saved as '+pendingBrand.category);recheck();renderBrands()}pendingBrand=null;$('remember').classList.add('hidden')};
 $('rememberNo').onclick=()=>{pendingBrand=null;$('remember').classList.add('hidden')};
 function catSelect(value){const s=document.createElement('select');[['','— several —'],...cats.filter(c=>c!=='Other').map(c=>[c,c])].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;s.append(o)});s.value=value||'';return s}
