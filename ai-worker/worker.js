@@ -155,7 +155,7 @@ function sameText(a, b) {
   return r === 0;
 }
 
-// Requests from the Studio Landmarks HUD. They have no Origin, so they must carry the HUD secret.
+// Requests from the U.G. Styling Assistant HUD. They have no Origin, so they must carry the HUD secret.
 // Second Life itself adds X-SecondLife-Owner-Key / -Owner-Name to every script request.
 async function handleHud(request, env, path) {
   const text = (s, status = 200) => new Response(s, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
