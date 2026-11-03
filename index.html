@@ -254,18 +254,18 @@ function notesCard(shape,brand,notes){const rule='──────────
 function cardText(){const shape=$('shape').value.trim()||'Untitled Shape',brand=$('brand').value.trim()||'Independent Creator',notes=$('notes').value.trim(),style=$('cardStyle').value;
 if(style==='notes')return notesCard(shape,brand,notes);
 const themes={
- princess:{top:'♡ ✧ ♡ ✧ ♡',heading:'♡ ',item:'♡ ',divider:'୨୧ ─────────── ୨୧'},
- royal:{top:'♛ ━━━━━━━━━━━━━ ♛',heading:'✦ ',item:'◇ ',divider:'━━━━━━━━━━━━━━━━'},
- couture:{top:'◆ ━━━━━━━━━━━━━ ◆',heading:'',item:'— ',divider:'━━━━━━━━━━━━━━━━'},
- celestial:{top:'☾ ✧ ⋆ ✧ ☽',heading:'✧ ',item:'✦ ',divider:'⋆ ───────────── ⋆'},
- boutique:{top:'◇ ───────────── ◇',heading:'',item:'· ',divider:'────────────────'},
+ princess:{top:'♡ ✧ ♡ ✧ ♡',heading:'♡ ',item:'♡ ',divider:'୨୧ ─────────── ୨୧',linkMark:'    ✧ '},
+ royal:{top:'♛ ━━━━━━━━━━━━━ ♛',heading:'✦ ',item:'◇ ',divider:'━━━━━━━━━━━━━━━━',linkMark:'    → '},
+ couture:{top:'◆ ━━━━━━━━━━━━━ ◆',heading:'',item:'— ',divider:'━━━━━━━━━━━━━━━━',linkMark:'    — '},
+ celestial:{top:'☾ ✧ ⋆ ✧ ☽',heading:'✧ ',item:'✦ ',divider:'⋆ ───────────── ⋆',linkMark:'    ⋆ '},
+ boutique:{top:'◇ ───────────── ◇',heading:'',item:'· ',divider:'────────────────',linkMark:'    › '},
  pearl:{top:'❀ · · · ❀ · · · ❀',heading:'',item:'✿ ',divider:'· · · ❀ · · ·',linkMark:'    ◦ '},
  ribbon:{top:'୨୧ ───────── ୨୧',heading:'',item:'♡ ',divider:'───────── ୨୧ ─────────',linkMark:'    ✧ '}
 };
 const t=themes[style];
 if(t){const custom=k=>fillText(cardTexts[k],brand,shape);let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];if(custom('intro'))out.push(custom('intro'),'');out.push('SHAPE: '+shape,'');
 cats.forEach(cat=>{const a=entries.filter(e=>e.yes&&e.cat===cat);if(!a.length)return;out.push(cat.toUpperCase(),'');
-a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push((t.linkMark||'   ↳ ')+s.store)}});out.push('')});
+a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push((t.linkMark||'    · ')+s.store)}});out.push('')});
 if(notes)out.push(t.divider,'SHAPE NOTES',notes,'');
 for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(t.divider,heading,'',custom(key),'')}
 if(custom('sign'))out.push(t.divider,custom('sign'));
@@ -278,7 +278,7 @@ let out=style==='minimal'?[brand.toUpperCase(),'STYLING CARD — '+shape.toUpper
 if(custom('intro'))out.push(custom('intro'),'');
 out.push('SHAPE: '+shape,'');
 cats.forEach(cat=>{let a=entries.filter(e=>e.yes&&e.cat===cat);if(a.length){out.push(cat.toUpperCase(),'');
-a.forEach(e=>{const line=itemLine(e);if(line){out.push(heart+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('   ↳ '+s.store)}}});out.push('')}});
+a.forEach(e=>{const line=itemLine(e);if(line){out.push(heart+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('    → '+s.store)}}});out.push('')}});
 if(notes)out.push(rule,'SHAPE NOTES',notes,'');
 for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(rule,heading,'',custom(key),'')}
 if(custom('sign'))out.push(rule,custom('sign'));
