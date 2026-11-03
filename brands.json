@@ -62,6 +62,18 @@
   ],
   "stores": [
     { "name": "LeLUTKA", "slurl": "http://maps.secondlife.com/secondlife/LeLutka/128/131/23" },
-    { "name": "theSkinnery", "slurl": "http://maps.secondlife.com/secondlife/SKINNERY/81/133/775" }
+    { "name": "theSkinnery", "slurl": "http://maps.secondlife.com/secondlife/SKINNERY/81/133/775" },
+    { "name": "Catwa", "slurl": "http://maps.secondlife.com/secondlife/Catwa%20Clip/129/129/29" },
+    { "name": "Genus", "slurl": "http://maps.secondlife.com/secondlife/Genus%20Project%20Mainstore/101/128/34" },
+    { "name": "Maitreya", "slurl": "http://maps.secondlife.com/secondlife/Maitreya%20Isle/129/130/23" },
+    { "name": "Legacy", "slurl": "http://maps.secondlife.com/secondlife/The%20Shops/123/125/25" },
+    { "name": "Meshbody", "slurl": "http://maps.secondlife.com/secondlife/The%20Shops/123/125/25" },
+    { "name": "Belleza", "slurl": "http://maps.secondlife.com/secondlife/Belleza/164/128/21" },
+    { "name": "avarosa", "slurl": "http://maps.secondlife.com/secondlife/Sandy%20Creek/192/187/368" },
+    { "name": "Izzie's", "slurl": "http://maps.secondlife.com/secondlife/Izzies/114/124/31" },
+    { "name": "tres beau", "slurl": "http://maps.secondlife.com/secondlife/tres%20beau/121/100/200" },
+    { "name": "Stealthic", "slurl": "http://maps.secondlife.com/secondlife/Rapture/132/128/22" },
+    { "name": "DOUX", "slurl": "http://maps.secondlife.com/secondlife/Secrets/185/155/1360" },
+    { "name": "Truth", "slurl": "http://maps.secondlife.com/secondlife/Truth/110/126/23" }
   ]
 }
