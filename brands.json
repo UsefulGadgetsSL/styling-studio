@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "updated": "2026-11-03",
   "note": "brands: brands that (almost) only make one kind of product. Name = how the brand starts the product name. stores: the shared store bank (store name + SLURL) used for LM links on styling cards. Edit in Obsidian: Styling Studio – designerliste.",
   "brands": [
@@ -425,6 +425,15 @@
     { "name": "HERA", "slurl": "http://maps.secondlife.com/secondlife/FOXCITY/73/42/23", "src": "crafty" },
     { "name": "INDECENT AFFAIRS", "slurl": "http://maps.secondlife.com/secondlife/Indecent%20Affairs/130/162/21", "src": "crafty" },
     { "name": "VYXEN", "slurl": "https://maps.secondlife.com/secondlife/Medellin/60/145/1324", "src": "crafty" },
-    { "name": "SECRETS", "slurl": "http://maps.secondlife.com/secondlife/El%20Arenal/118/133/22", "src": "crafty" }
+    { "name": "SECRETS", "slurl": "http://maps.secondlife.com/secondlife/El%20Arenal/118/133/22", "src": "crafty" },
+    { "name": "A\u0026Y", "slurl": "http://maps.secondlife.com/secondlife/MagnetiS/50/130/40", "src": "marketplace" },
+    { "name": "Absurde Nox", "slurl": "http://maps.secondlife.com/secondlife/Silver%20City/187/194/1802", "src": "marketplace" },
+    { "name": "[AMA]", "slurl": "http://maps.secondlife.com/secondlife/District%20Red/236/94/22", "src": "marketplace" },
+    { "name": "BROKEN ARROWS", "slurl": "http://maps.secondlife.com/secondlife/Match/199/65/46", "src": "marketplace" },
+    { "name": "Eutha Store", "slurl": "http://maps.secondlife.com/secondlife/Sintetica/96/70/624", "src": "marketplace" },
+    { "name": "Eva Store", "slurl": "http://maps.secondlife.com/secondlife/ELEVEN/182/185/32", "src": "marketplace" },
+    { "name": "No Cabide", "slurl": "http://maps.secondlife.com/secondlife/Vardor/203/31/22", "src": "marketplace" },
+    { "name": "Stop", "slurl": "http://maps.secondlife.com/secondlife/The%20Royals/100/81/3002", "src": "marketplace" },
+    { "name": "Youke", "slurl": "http://maps.secondlife.com/secondlife/Paradise%20Shores/135/93/502", "src": "marketplace" }
   ]
 }
