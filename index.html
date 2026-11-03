@@ -216,7 +216,10 @@ function parseStoreExport(raw){const out=[];for(let line of String(raw||'').spli
  line=line.replace(/^\s*\[[\d:\s]+\]\s*[^:|]*:\s*/,'').replace(/^[^|:]*Studio Landmarks\s*:\s*/i,'').trim();
  // Header from the HUD: "UG-STORES v1 · SHAPE: Celine"
  const sh=line.match(/UG-STORES v1\W*SHAPE:\s*(.+)$/i);if(sh){out.shape=sh[1].trim();continue}
- const m=line.match(/^(.+?)\s*\|\s*(.*?)\s*\|\s*(.+?)\s*$/);if(!m)continue;
+ let m=line.match(/^(.+?)\s*\|\s*(.*?)\s*\|\s*(.+?)\s*$/);
+ // A line from the HUD's SLURL button: "PKC: Forbidden Paradise (212,209,22)" or "PKC: http://maps..."
+ if(!m){const c=line.match(/^([^:|]+?):\s+(.+?)\s*$/);if(c)m=[line,c[1],'',c[2]]}
+ if(!m)continue;
  const where=m[3];let slurl='';
  if(/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)\S+$/i.test(where))slurl=where;
  else{const p=where.match(/^(.+?)\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);if(p)slurl='http://maps.secondlife.com/secondlife/'+encodeURIComponent(p[1].trim())+'/'+p[2]+'/'+p[3]+'/'+p[4]}
