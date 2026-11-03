@@ -1,8 +1,19 @@
-// Useful Gadgets Styling Studio – AI Scanner (Cloudflare Worker)
+// Useful Gadgets Styling Studio – AI Scanner + account & store sync (Cloudflare Worker)
 // Uses Cloudflare's own Workers AI (free daily allowance). No API key needed.
 // Setup in the Cloudflare dashboard:
 //   Settings → Bindings → Add → Workers AI, variable name: AI
+//   Settings → Bindings → Add → D1 database, variable name: DB   (tables are made automatically)
+//   Settings → Variables and Secrets → Secret HUD_SECRET (same text as in the STL Sync script)
 //   Optional variable ALLOWED_ORIGIN = https://usefulgadgetssl.github.io
+//
+// Routes
+//   POST /            AI scan of 1-3 screenshots (website)
+//   POST /auth/pair   {code} -> {token, name}  log in the website with a code from the HUD
+//   GET  /me          -> {name}                who is logged in
+//   POST /auth/logout                          log out
+//   GET  /stores      -> {stores:[{name,shape,slurl}]}  my private stores
+//   POST /lsl/code    (HUD) -> "CODE ABC123"   new login code, valid 10 minutes
+//   POST /lsl/sync    (HUD) lines "name|shape|slurl", first line "RESET" = replace all
 
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 const CATS = ["Shape", "Head", "Body", "Skin", "Brows", "Eyes", "Hair", "Makeup", "Tattoo", "Blemishes", "Veins", "Moles", "Ears", "Teeth", "Nails", "Clothing", "Shoes", "Jewelry", "Accessories", "Alpha", "Other"];
@@ -106,14 +117,109 @@ async function scanImage(env, image, brands) {
   }
 }
 
+// ---------- account & store sync (D1 database "DB") ----------
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SLURL = /^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/secondlife\/|secondlife:\/\/)[^\s<>"']{1,300}$/i;
+const CODE_MINUTES = 10;
+const SESSION_DAYS = 90;
+const MAX_STORES = 2000;   // per avatar
+
+let tablesReady = false;
+async function ensureTables(env) {
+  if (tablesReady) return;
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS codes (code TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, expires INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, created INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS stores (owner_key TEXT NOT NULL, name TEXT NOT NULL, shape TEXT, slurl TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (owner_key, name, slurl))")
+  ]);
+  tablesReady = true;
+}
+
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+function randomCode() {
+  const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";   // no 0/O, 1/I/L
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), b => A[b % A.length]).join("");
+}
+const randomToken = () => hex(crypto.getRandomValues(new Uint8Array(32)));
+async function sha256(s) {
+  return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))));
+}
+function sameText(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+// Requests from the Studio Landmarks HUD. They have no Origin, so they must carry the HUD secret.
+// Second Life itself adds X-SecondLife-Owner-Key / -Owner-Name to every script request.
+async function handleHud(request, env, path) {
+  const text = (s, status = 200) => new Response(s, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  if (request.method !== "POST") return text("method not allowed", 405);
+  if (!env.HUD_SECRET || !sameText(request.headers.get("X-UG-Secret") || "", env.HUD_SECRET)) return text("forbidden", 403);
+  const owner = (request.headers.get("X-SecondLife-Owner-Key") || "").toLowerCase();
+  const ownerName = (request.headers.get("X-SecondLife-Owner-Name") || "").slice(0, 64);
+  if (!UUID.test(owner)) return text("no owner", 400);
+  if (!env.DB) return text("database missing", 503);
+  await ensureTables(env);
+  const now = Date.now();
+
+  if (path === "/lsl/code") {
+    await env.DB.prepare("DELETE FROM codes WHERE expires < ? OR owner_key = ?").bind(now, owner).run();
+    const code = randomCode();
+    await env.DB.prepare("INSERT INTO codes (code, owner_key, owner_name, expires) VALUES (?, ?, ?, ?)")
+      .bind(code, owner, ownerName, now + CODE_MINUTES * 60000).run();
+    return text("CODE " + code);
+  }
+
+  if (path === "/lsl/sync") {
+    const lines = (await request.text()).split("\n").map(l => l.trim()).filter(Boolean).slice(0, 200);
+    const stmts = [];
+    let reset = false;
+    if (lines[0] === "RESET") { reset = true; lines.shift(); stmts.push(env.DB.prepare("DELETE FROM stores WHERE owner_key = ?").bind(owner)); }
+    let added = 0;
+    for (const l of lines) {
+      const p = l.split("|");
+      if (p.length < 3) continue;
+      const name = p[0].trim().slice(0, 80), shape = p[1].trim().slice(0, 60), slurl = p.slice(2).join("|").trim();
+      if (!name || !SLURL.test(slurl)) continue;
+      stmts.push(env.DB.prepare("INSERT OR REPLACE INTO stores (owner_key, name, shape, slurl, updated) VALUES (?, ?, ?, ?, ?)")
+        .bind(owner, name, shape, slurl, now));
+      added++;
+    }
+    const before = reset ? 0 : (await env.DB.prepare("SELECT COUNT(*) AS c FROM stores WHERE owner_key = ?").bind(owner).first()).c;
+    if (before + added > MAX_STORES) return text("FULL " + MAX_STORES, 413);
+    if (stmts.length) await env.DB.batch(stmts);
+    const total = (await env.DB.prepare("SELECT COUNT(*) AS c FROM stores WHERE owner_key = ?").bind(owner).first()).c;
+    return text("SYNCED " + added + " " + total);
+  }
+  return text("not found", 404);
+}
+
+// Logged-in website: "Authorization: Bearer <token>" -> session row, or null
+async function sessionFor(request, env) {
+  const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+([0-9a-f]{64})$/i);
+  if (!m || !env.DB) return null;
+  await ensureTables(env);
+  const s = await env.DB.prepare("SELECT owner_key, owner_name, created FROM sessions WHERE token_hash = ?").bind(await sha256(m[1].toLowerCase())).first();
+  if (!s) return null;
+  if (Date.now() - s.created > SESSION_DAYS * 86400000) return null;
+  return s;
+}
+
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+    if (path.startsWith("/lsl/")) return handleHud(request, env, path);
+
     const origin = request.headers.get("Origin") || "";
     const allowed = env.ALLOWED_ORIGIN || "https://usefulgadgetssl.github.io";
     const headers = {
       "Access-Control-Allow-Origin": allowed,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Vary": "Origin",
       "Content-Type": "application/json"
     };
@@ -121,6 +227,42 @@ export default {
 
     if (origin !== allowed) return reply({ error: "Origin not allowed" }, 403);
     if (request.method === "OPTIONS") return new Response(null, { headers });
+
+    // --- account ---
+    if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores") {
+      if (!env.DB) return reply({ error: "Database (DB) is not connected yet" }, 503);
+      await ensureTables(env);
+      if (path === "/auth/pair") {
+        if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+        let body; try { body = await request.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
+        const code = String(body && body.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (code.length !== 6) return reply({ error: "The code has 6 letters/numbers" }, 400);
+        const row = await env.DB.prepare("SELECT owner_key, owner_name, expires FROM codes WHERE code = ?").bind(code).first();
+        if (!row || row.expires < Date.now()) return reply({ error: "Code not found or too old. Get a new one in the HUD: 🔄 SYNC → 🔑 WEB LOGIN" }, 401);
+        const token = randomToken();
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM codes WHERE code = ?").bind(code),
+          env.DB.prepare("INSERT INTO sessions (token_hash, owner_key, owner_name, created) VALUES (?, ?, ?, ?)")
+            .bind(await sha256(token), row.owner_key, row.owner_name, Date.now())
+        ]);
+        return reply({ token, name: row.owner_name || "" });
+      }
+      const s = await sessionFor(request, env);
+      if (!s) return reply({ error: "Not logged in" }, 401);
+      if (path === "/me") return reply({ name: s.owner_name || "" });
+      if (path === "/auth/logout") {
+        const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+([0-9a-f]{64})$/i);
+        await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(m[1].toLowerCase())).run();
+        return reply({ ok: true });
+      }
+      if (path === "/stores") {
+        const r = await env.DB.prepare("SELECT name, shape, slurl, updated FROM stores WHERE owner_key = ? ORDER BY updated DESC LIMIT ?").bind(s.owner_key, MAX_STORES).all();
+        return reply({ stores: r.results || [] });
+      }
+    }
+
+    // --- AI scan ---
+    if (path !== "/" && path !== "/scan") return reply({ error: "Not found" }, 404);
     if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405);
     if (!env.AI) return reply({ error: "Workers AI binding (AI) is missing" }, 503);
     if (Number(request.headers.get("content-length") || 0) > 5500000) return reply({ error: "Upload too large" }, 413);
