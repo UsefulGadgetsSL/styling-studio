@@ -244,10 +244,10 @@ function notesCard(shape,brand,notes){const rule='──────────
  const text=k=>fillText(cardTexts[k],brand,shape);
  out.push('· ──────────────── · '+spaced(brand)+' · ──────────────── ·','       ✧♡✧  S H A P E   &   S T Y L I N G   N O T E S  ✧♡✧','');
  if(text('intro'))out.push(text('intro'),'');
- out.push('♡ Shape: '+shape);items('Shape').forEach(e=>push(e,'• '));if(notes)out.push(notes);out.push('');
- sections.forEach(([title,cs])=>{if(!cs.some(c=>items(c).length))return;out.push(rule,'♡  '+title,rule,'');
-  cs.forEach(c=>{const a=items(c);if(!a.length)return;out.push(lab[c]+':');a.forEach(e=>push(e,'🌸 '));out.push('')})});
- [['T I P S','tips'],['S U P P O R T','support']].forEach(([t,k])=>{if(text(k))out.push(rule,'♡  '+t,rule,'',text(k),'')});
+ out.push('Shape: '+shape);items('Shape').forEach(e=>push(e,'• '));if(notes)out.push(notes);out.push('');
+ sections.forEach(([title,cs])=>{if(!cs.some(c=>items(c).length))return;out.push(rule,title,rule,'');
+  cs.forEach(c=>{const a=items(c);if(!a.length)return;out.push(lab[c]+':');a.forEach(e=>push(e,'♡ '));out.push('')})});
+ [['T I P S','tips'],['S U P P O R T','support']].forEach(([t,k])=>{if(text(k))out.push(rule,t,rule,'',text(k),'')});
  if(text('sign'))out.push(rule,text('sign'));
  if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio');
  return out.join(String.fromCharCode(10))}
@@ -261,11 +261,11 @@ const themes={
  boutique:{top:'◇ ───────────── ◇',heading:'',item:'· ',divider:'────────────────'}
 };
 const t=themes[style];
-if(t){const custom=k=>fillText(cardTexts[k],brand,shape);let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];if(custom('intro'))out.push(custom('intro'),'');out.push(t.heading+'SHAPE: '+shape,'');
-cats.forEach(cat=>{const a=entries.filter(e=>e.yes&&e.cat===cat);if(!a.length)return;out.push(t.heading+cat.toUpperCase(),'');
+if(t){const custom=k=>fillText(cardTexts[k],brand,shape);let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];if(custom('intro'))out.push(custom('intro'),'');out.push('SHAPE: '+shape,'');
+cats.forEach(cat=>{const a=entries.filter(e=>e.yes&&e.cat===cat);if(!a.length)return;out.push(cat.toUpperCase(),'');
 a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('   ↳ '+s.store)}});out.push('')});
 if(notes)out.push(t.divider,'SHAPE NOTES',notes,'');
-for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(t.divider,t.heading+heading,'',custom(key),'')}
+for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(t.divider,heading,'',custom(key),'')}
 if(custom('sign'))out.push(t.divider,custom('sign'));
 if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio');
 return out.join(String.fromCharCode(10))}
