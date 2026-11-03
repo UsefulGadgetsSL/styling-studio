@@ -434,6 +434,7 @@
     { "name": "Eva Store", "slurl": "http://maps.secondlife.com/secondlife/ELEVEN/182/185/32", "src": "marketplace" },
     { "name": "No Cabide", "slurl": "http://maps.secondlife.com/secondlife/Vardor/203/31/22", "src": "marketplace" },
     { "name": "Stop", "slurl": "http://maps.secondlife.com/secondlife/The%20Royals/100/81/3002", "src": "marketplace" },
+    { "name": "WarPaint", "slurl": "https://maps.secondlife.com/secondlife/Gilmore/79/193/1024", "src": "user" },
     { "name": "Youke", "slurl": "http://maps.secondlife.com/secondlife/Paradise%20Shores/135/93/502", "src": "marketplace" }
   ]
 }

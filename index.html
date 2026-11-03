@@ -74,7 +74,18 @@ function isMeshPart(name){const x=String(name||'').toLowerCase();
  if(head.test(x)&&/\b(?:teeth|gums|tongue|jaw|eyeballs?)\b/.test(x)&&!/\b(?:skin|tattoo|makeup|lipstick|blush|liner)\b/.test(x))return true;
  if(body.test(x)&&/\b(?:hands?|feet|foot|neck)\b/.test(x)&&!/\b(?:nails?|shoes?|boots?|sandals?|heels?|gloves?|rings?|bracelets?|socks?|tattoo|skin)\b/.test(x))return true;
  return false}
-function append(name,fromOCR=false){name=name.trim();if(!name||entries.some(e=>(e.name||((e.designer||'')+' '+(e.product||''))).toLowerCase()===name.toLowerCase()))return;const parts=splitDesigner(name),cat=guess(name);entries.push({name,designer:parts.designer,product:parts.product,cat,yes:!(/alpha|not found|no.match|hover height/i.test(name))&&!(fromOCR&&cat==='Other')&&!isMeshPart(name)})}
+// AI/OCR sometimes misreads a letter in a brand ("theSkinsery"). If the first word(s) are 1-2 letters
+// away from a known brand or store, use the known spelling.
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const q=[i];for(let j=1;j<=n;j++)q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=q}return p[n]}
+function fixBrandSpelling(name){const words=bnorm(name).split(' ').filter(Boolean);if(!words.length)return name;
+ const known=[...allBrands().map(b=>b.name),...storePool().map(s=>storeBrandName(s.name))];let best=null;
+ for(let w=1;w<=Math.min(3,words.length);w++){const piece=words.slice(0,w).join('');
+  for(const k of known){const c=bnorm(k).replace(/ /g,'');if(c.length<5||Math.abs(c.length-piece.length)>2)continue;
+   const d=lev(piece,c),lim=c.length>=9?2:c.length>=6?1:0;if(d===0)return name;if(d<=lim&&(!best||d<best.d))best={d,w,k}}}
+ if(!best)return name;
+ const re=new RegExp('^([^a-z0-9]*)'+words.slice(0,best.w).map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^a-z0-9]+'),'i');
+ return name.replace(re,(m,lead)=>lead+best.k.trim())}
+function append(name,fromOCR=false){name=name.trim();if(fromOCR)name=fixBrandSpelling(name);if(!name||entries.some(e=>(e.name||((e.designer||'')+' '+(e.product||''))).toLowerCase()===name.toLowerCase()))return;const parts=splitDesigner(name),cat=guess(name);entries.push({name,designer:parts.designer,product:parts.product,cat,yes:!(/alpha|not found|no.match|hover height/i.test(name))&&!(fromOCR&&cat==='Other')&&!isMeshPart(name)})}
 function importOutfitReport(raw){
  const groupMap={body:'Body',clothes:'Clothing',clothing:'Clothing',shoes:'Shoes',hair:'Hair',jewelry:'Jewelry',accessories:'Accessories',other:'Other'};
  let group='Other',added=0,skipped=0;
@@ -258,7 +269,7 @@ const defaultEndpoint='https://styling-studio-ai.usefulgadgetssl.workers.dev';
 let savedEndpoint='';try{savedEndpoint=localStorage.getItem('ug-ai-endpoint')||''}catch{}
 $('aiEndpoint').value=savedEndpoint||defaultEndpoint;
 $('saveEndpoint').onclick=()=>{const v=$('aiEndpoint').value.trim();if(v&&!/^https:\/\/[a-z0-9.-]+(?:\/.*)?$/i.test(v)){notify('Enter a valid HTTPS endpoint');return}localStorage.setItem('ug-ai-endpoint',v);notify('AI endpoint saved')};
-function imageData(file){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{try{const scale=Math.min(1,1600/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.84))}catch(e){reject(e)}finally{URL.revokeObjectURL(url)}};img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Invalid image'))};img.src=url})}
+function imageData(file){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{try{const scale=Math.min(2,1600/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',0.84))}catch(e){reject(e)}finally{URL.revokeObjectURL(url)}};img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Invalid image'))};img.src=url})}
 $('aiScan').onclick=async()=>{if(!screens.length){notify('Choose screenshots first');return}const endpoint=$('aiEndpoint').value.trim()||defaultEndpoint;if(!/^https:\/\/[a-z0-9.-]+(?:\/.*)?$/i.test(endpoint)){notify('Configure an HTTPS AI endpoint first');return}if(screens.length>3){notify('Select up to 3 screenshots for AI scan');return}
 const button=$('aiScan');button.disabled=true;$('scanStatus').textContent='Analyzing screenshots with AI…';
 try{const images=await Promise.all(screens.map(imageData));const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images})});const result=await response.json();if(!response.ok)throw Error(result.error||'Request failed');if(!Array.isArray(result.items))throw Error('Invalid AI response');
