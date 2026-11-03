@@ -200,10 +200,15 @@ function storeFor(e){const full=e.name||((e.designer||'')+' '+(e.product||''));c
  const label=b?b.name:String(e.designer||'').replace(/^[\[{(*]+|[\]})*.]+$/g,'').trim(),k=bnorm(label),kc=k.replace(/ /g,'');
  const pool=storePool();
  if(k.length>=3){const hit=pool.find(s=>(' '+bnorm(s.name)+' ').includes(' '+k+' '))||(kc.length>=5&&pool.find(s=>bnorm(s.name).replace(/ /g,'').includes(kc)));if(hit)return {name:label,store:hit.slurl}}
- // Store brand anywhere in the product name: "*S.E.LELUTKA X ..." -> LeLutka store
+ // Product name starts with the store name: "Believe - Lace Dress" -> Believe
+ const fn=bnorm(full);let pre=null,plen=0;
+ for(const s of pool){const sk=bnorm(storeBrandName(s.name));if(sk.length>=3&&sk.length>plen&&(fn===sk||fn.startsWith(sk+' '))){pre={name:storeBrandName(s.name),store:s.slurl};plen=sk.length}}
+ if(pre)return pre;
+ // Store brand anywhere in the product name: "*S.E.LELUTKA X ..." -> LeLutka store.
+ // Only my own stores and bank stores marked "anywhere" (store names like "Believe" are normal words)
  // Text in brackets like (LeLutkaEVOX) only tells what it fits, so it does not count
  const nc=bnorm(full.replace(/\([^)]*\)|\[[^\]]*(?:legacy|reborn|evox|evo x|lelutka|catwa|maitreya|kupra|ebody|fit)[^\]]*\]/gi,' ')).replace(/ /g,'');let best=null,len=0;
- for(const s of pool){const sb=storeBrandName(s.name),sk=bnorm(sb).replace(/ /g,'');if(sk.length>=5&&sk.length>len&&nc.includes(sk)){best={name:sb,store:s.slurl};len=sk.length}}
+ for(const s of [...importedStores,...sharedStores.filter(x=>x.anywhere)]){const sb=storeBrandName(s.name),sk=bnorm(sb).replace(/ /g,'');if(sk.length>=5&&sk.length>len&&nc.includes(sk)){best={name:sb,store:s.slurl};len=sk.length}}
  return best}
 function renderStoreOptions(){const dl=$('storeOptions');dl.innerHTML='';importedStores.forEach(s=>{const o=document.createElement('option');o.value=s.slurl;o.label=s.name+(s.category?' ('+s.category+')':'');dl.append(o)});$('storeStatus').textContent=importedStores.length?importedStores.length+' imported stores. Brands whose name is in a store name are linked automatically; others: pick from the list in the store field.':'No stores imported yet.'}
 $('importStores').onclick=()=>{const list=parseStoreExport($('storeImport').value);if(!list.length){notify('No store lines found. Copy from UG-STORES v1 to UG-STORES END.');return}const byUrl=new Map(importedStores.map(s=>[s.slurl,s]));list.forEach(s=>byUrl.set(s.slurl,s));importedStores=[...byUrl.values()];try{localStorage.setItem(storeKey,JSON.stringify(importedStores))}catch{notify('Could not save stores in this browser')}$('storeImport').value='';
