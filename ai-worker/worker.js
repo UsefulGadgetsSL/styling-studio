@@ -13,7 +13,7 @@
 //   POST /auth/logout                          log out
 //   GET  /stores      -> {stores:[{name,shape,slurl}]}  my private stores
 //   POST /lsl/code    (HUD) -> "CODE ABC123"   new login code, valid 10 minutes
-//   POST /lsl/sync    (HUD) lines "name|shape|slurl", first line "RESET" = replace all
+//   POST /lsl/sync    (HUD) lines "name|shape|slurl-or-Marketplace-link", first line "RESET" = replace all
 //   POST /lsl/scan    (HUD) lines "name|creator", first line "NEW" (new scan) or "MORE" (rest of it)
 //   GET  /scans/latest -> {created, items:[{name,creator}]}  my latest outfit scan
 
@@ -123,6 +123,8 @@ async function scanImage(env, image, brands) {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLURL = /^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/secondlife\/|secondlife:\/\/)[^\s<>"']{1,300}$/i;
+// 🛒 Marketplace product or store links from the HUD (kept in the same "stores" table)
+const MPURL = /^https:\/\/marketplace\.secondlife\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?(?:p\/[^\s<>"'\/?#]{1,200}\/\d{1,12}|stores\/\d{1,12})$/;
 const CODE_MINUTES = 10;
 const SESSION_DAYS = 90;
 const MAX_STORES = 2000;   // per avatar
@@ -186,7 +188,7 @@ async function handleHud(request, env, path) {
       const p = l.split("|");
       if (p.length < 3) continue;
       const name = p[0].trim().slice(0, 80), shape = p[1].trim().slice(0, 60), slurl = p.slice(2).join("|").trim();
-      if (!name || !SLURL.test(slurl)) continue;
+      if (!name || !(SLURL.test(slurl) || MPURL.test(slurl))) continue;
       stmts.push(env.DB.prepare("INSERT OR REPLACE INTO stores (owner_key, name, shape, slurl, updated) VALUES (?, ?, ?, ?, ?)")
         .bind(owner, name, shape, slurl, now));
       added++;
