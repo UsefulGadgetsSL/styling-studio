@@ -291,7 +291,7 @@ function notesCard(shape,brand,notes){const rule='──────────
  const lab={Shape:'SHAPE',Head:'HEAD',Body:'BODY',Skin:'SKIN',Brows:'BROWS',Eyes:'EYES',Hair:'HAIR',Makeup:'MAKEUP',Tattoo:'TATTOOS',Blemishes:'BLEMISHES',Veins:'VEINS',Moles:'MOLES & BEAUTY MARKS',Ears:'EARS',Teeth:'TEETH',Nails:'NAILS',Clothing:'OUTFIT',Shoes:'SHOES',Jewelry:'JEWELRY',Accessories:'ACCESSORIES',Alpha:'ALPHA',Other:'OTHER'};
  const sections=[['H E A D   &   F A C E   B A S I C S',['Head','Skin','Brows','Eyes','Hair','Ears','Teeth','Moles','Blemishes','Veins']],['B O D Y   &   D E T A I L S',['Body']],['C O S M E T I C S   &   F A C E   T A T T O O S',['Makeup','Tattoo']],['S T Y L I N G',['Clothing','Shoes','Jewelry','Accessories','Nails','Alpha','Other']]];
  const items=c=>entries.filter(e=>e.yes&&e.cat===c&&itemLine(e));
- const push=(e,mark)=>{out.push(mark+itemLine(e));noteLines(e).forEach(l=>out.push(l));if(links){const s=storeFor(e);if(s)out.push('LM: '+s.store)}};
+ const push=(e,mark)=>{out.push(mark+itemLine(e));noteLines(e).forEach(l=>out.push(l));if(links){const s=storeFor(e);if(s)out.push('LM: '+s.store);const mp=mpFor(e);if(mp)out.push('Buy on Marketplace: '+mp)}};
  const text=k=>fillText(cardTexts[k],brand,shape);
  out.push('· ──────────────── · '+spaced(brand)+' · ──────────────── ·','       ✧♡✧  S H A P E   &   S T Y L I N G   N O T E S  ✧♡✧','');
  if(text('intro'))out.push(text('intro'),'');
@@ -316,7 +316,7 @@ const themes={
 const t=themes[style];
 if(t){const custom=k=>fillText(cardTexts[k],brand,shape);let out=[t.top,brand.toUpperCase(),shape.toUpperCase()+' | STYLING CARD',t.top,''];if(custom('intro'))out.push(custom('intro'),'');out.push('SHAPE: '+shape,'');
 cats.forEach(cat=>{const a=entries.filter(e=>e.yes&&e.cat===cat);if(!a.length)return;out.push(cat.toUpperCase(),'');
-a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push((t.linkMark||'    · ')+s.store)}});out.push('')});
+a.forEach(e=>{const line=itemLine(e);if(!line)return;out.push(t.item+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push((t.linkMark||'    · ')+s.store);const mp=mpFor(e);if(mp)out.push((t.linkMark||'    · ')+'Marketplace: '+mp)}});out.push('')});
 if(notes)out.push(t.divider,'SHAPE NOTES',notes,'');
 for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(t.divider,heading,'',custom(key),'')}
 if(custom('sign'))out.push(t.divider,custom('sign'));
@@ -329,7 +329,7 @@ let out=style==='minimal'?[brand.toUpperCase(),'STYLING CARD — '+shape.toUpper
 if(custom('intro'))out.push(custom('intro'),'');
 out.push('SHAPE: '+shape,'');
 cats.forEach(cat=>{let a=entries.filter(e=>e.yes&&e.cat===cat);if(a.length){out.push(cat.toUpperCase(),'');
-a.forEach(e=>{const line=itemLine(e);if(line){out.push(heart+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('    → '+s.store)}}});out.push('')}});
+a.forEach(e=>{const line=itemLine(e);if(line){out.push(heart+line);noteLines(e).forEach(l=>out.push('   '+l));if($('storeLinks').checked){const s=storeFor(e);if(s)out.push('    → '+s.store);const mp=mpFor(e);if(mp)out.push('    → Marketplace: '+mp)}}});out.push('')}});
 if(notes)out.push(rule,'SHAPE NOTES',notes,'');
 for(const [heading,key] of [['STYLING TIPS','tips'],['SUPPORT','support']]){if(custom(key))out.push(rule,heading,'',custom(key),'')}
 if(custom('sign'))out.push(rule,custom('sign'));
@@ -355,7 +355,23 @@ function renderBrands(){const root=$('brandList');root.innerHTML='';const mine=n
 (()=>{const s=catSelect('');s.id='nbCat';$('nbCat').replaceWith(s)})();
 $('nbAdd').onclick=()=>{const name=$('nbName').value.trim(),store=$('nbStore').value.trim();if(!name){notify('Write the brand name first');return}if(!okStore(store)){notify('Use a SLURL: http://maps.secondlife.com/secondlife/...');return}const patch={category:$('nbCat').value};if(store)patch.store=store;upsertBrand(name,patch);$('nbName').value='';$('nbStore').value='';recheck();renderBrands();notify(name+' saved')};
 // ---- Stores imported from the Styling Assistant HUD (🎨 EXPORT; it was called Studio Landmarks before) ----
-const storeKey='ug-stores-v1';let importedStores=[],sharedStores=[],cloudStores=[];
+const storeKey='ug-stores-v1';let importedStores=[],sharedStores=[],cloudStores=[],cloudMp=[];
+// ---- 🛒 Marketplace links from the Styling Assistant HUD (🛒 MARKETPLACE, sent with 🔄 SYNC ALL) ----
+const isMpLink=u=>/^https:\/\/marketplace\.secondlife\.com\//i.test(String(u||''));
+// Product link: the words in the link (or its name) must be in the product name: ".../p/A-R-T-E-Olsen-Freckles/123" -> "A R T E - Olsen Freckles".
+// Store link (.../stores/123): its name must be the brand, like the LM store links.
+function mpFor(e){if(!cloudMp.length)return null;
+ const full=String(e.name||((e.designer||'')+' '+(e.product||''))).replace(/\s*\{[^{}]*\}\s*$/,'');
+ const have=new Set(bnorm(full).split(' ').filter(w=>w.length>1));let best=null,score=0;
+ for(const m of cloudMp){const pm=m.slurl.match(/\/p\/([^\/]+)\/\d+/);if(!pm)continue;
+  let slug='';try{slug=decodeURIComponent(pm[1])}catch{slug=pm[1]}
+  for(const list of [bnorm(slug.replace(/-/g,' ')).split(' '),bnorm(m.name).split(' ')]){const w=list.filter(x=>x.length>1);if(w.length<2)continue;
+   const hit=w.filter(x=>have.has(x)).length,sc=hit/w.length;if(hit>=2&&sc>=0.7&&sc>score){score=sc;best=m.slurl}}}
+ if(best)return best;
+ const d=bnorm(String(e.designer||'').replace(/^[\[{(*]+|[\]})*.]+$/g,'')),fn=bnorm(full);
+ for(const m of cloudMp){if(!/\/stores\/\d+/.test(m.slurl))continue;const k=bnorm(storeBrandName(m.name));if(k.length<3)continue;
+  if((d&&(d===k||(' '+k+' ').includes(' '+d+' ')))||fn===k||fn.startsWith(k+' '))return m.slurl}
+ return null}
 // My own stores first (imported in this browser, then my private store bank online), then the shared store bank
 const storePool=()=>[...importedStores,...cloudStores,...sharedStores];
 const isMine=s=>importedStores.includes(s)||cloudStores.includes(s);
@@ -417,15 +433,16 @@ async function api(path,opt={}){const h={'Content-Type':'application/json'};if(a
 function showAccount(){const inn=!!(account&&account.token);$('acctOut').classList.toggle('hidden',inn);$('acctIn').classList.toggle('hidden',!inn);
  if(inn)$('acctName').textContent='Logged in as '+(account.name||'your avatar')+' · '+cloudStores.length+' stores in your private store bank'}
 async function loadCloudStores(){if(!account||!account.token){cloudStores=[];showAccount();return}
- try{const j=await api('/stores');cloudStores=(j.stores||[]).filter(s=>s&&typeof s.name==='string'&&typeof s.slurl==='string').map(s=>({name:s.name,category:s.shape||'',slurl:s.slurl,cloud:true}));$('acctStatus').textContent=''}
- catch(e){if(e.status===401){account=null;cloudStores=[];try{localStorage.removeItem(acctKey)}catch{}$('acctStatus').textContent='You were logged out. Get a new code in the HUD: 🔄 SYNC → 🔑 WEB LOGIN.'}else $('acctStatus').textContent='Could not load your stores: '+e.message}
+ try{const j=await api('/stores');const all=(j.stores||[]).filter(s=>s&&typeof s.name==='string'&&typeof s.slurl==='string').map(s=>({name:s.name,category:s.shape||'',slurl:s.slurl,cloud:true}));
+ cloudStores=all.filter(s=>!isMpLink(s.slurl));cloudMp=all.filter(s=>isMpLink(s.slurl));$('acctStatus').textContent=''}
+ catch(e){if(e.status===401){account=null;cloudStores=[];cloudMp=[];try{localStorage.removeItem(acctKey)}catch{}$('acctStatus').textContent='You were logged out. Get a new code in the HUD: 🔄 SYNC → 🔑 WEB LOGIN.'}else $('acctStatus').textContent='Could not load your stores: '+e.message}
  showAccount();renderBrands();preview()}
 $('acctLogin').onclick=async()=>{const code=$('acctCode').value.trim();if(!code){notify('Type the code from the HUD');return}$('acctStatus').textContent='Logging in…';
  try{const j=await api('/auth/pair',{method:'POST',body:JSON.stringify({code})});account={token:j.token,name:j.name||''};try{localStorage.setItem(acctKey,JSON.stringify(account))}catch{}
   $('acctCode').value='';notify('Logged in'+(j.name?' as '+j.name:''));await loadCloudStores()}catch(e){$('acctStatus').textContent=e.message}};
 $('acctCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('acctLogin').click()});
 $('acctRefresh').onclick=async()=>{await loadCloudStores();if(account)notify(cloudStores.length+' stores loaded')};
-$('acctLogout').onclick=async()=>{try{await api('/auth/logout',{method:'POST'})}catch{}account=null;cloudStores=[];try{localStorage.removeItem(acctKey)}catch{}$('acctStatus').textContent='';showAccount();preview();notify('Logged out')};
+$('acctLogout').onclick=async()=>{try{await api('/auth/logout',{method:'POST'})}catch{}account=null;cloudStores=[];cloudMp=[];try{localStorage.removeItem(acctKey)}catch{}$('acctStatus').textContent='';showAccount();preview();notify('Logged out')};
 // Import my latest outfit scan from the HUD (🔄 SYNC → 🔍 SCAN ME). Attachments only; body layers come from screenshots.
 // Each item: tidy name from the HUD + its creator, shown as "Head - lel evox / AVALON 4.0 {Jaden Lelutka (jaden.nova)}".
 // The {creator} is removed again on the styling card (Tidy names).
