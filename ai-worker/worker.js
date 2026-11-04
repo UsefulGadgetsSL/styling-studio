@@ -16,6 +16,16 @@
 //   POST /lsl/sync    (HUD) lines "name|shape|slurl-or-Marketplace-link", first line "RESET" = replace all
 //   POST /lsl/scan    (HUD) lines "name|creator", first line "NEW" (new scan) or "MORE" (rest of it)
 //   GET  /scans/latest -> {created, items:[{name,creator}]}  my latest outfit scan
+//   GET  /shared       -> {stores:[{name,slurl}]}  approved store suggestions (added to the shared bank)
+//   GET  /prefs        -> {share, admin}   POST /prefs {share:true|false}
+//   GET  /admin/suggestions  (admin)  -> {pending:[...], shared:[...]}
+//   POST /admin/decide       (admin)  {action:"approve"|"reject"|"remove", key, region, name?}
+//
+// Store suggestions: when a customer syncs, stores that are NOT in the shared bank (brands.json) are
+// copied to "suggestions" (name + SLURL; the private "stores" table is never changed by this).
+// When AUTO_APPROVE different avatars have the same store in the same region, it is approved automatically.
+// The admin (ADMIN_NAMES, default ChristineStarz) can approve, reject or remove suggestions.
+// Customers can turn sharing off under Settings & Accounts → Account; their suggestions are then deleted.
 
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 const CATS = ["Shape", "Head", "Body", "Skin", "Brows", "Eyes", "Hair", "Makeup", "Tattoo", "Blemishes", "Veins", "Moles", "Ears", "Teeth", "Nails", "Clothing", "Shoes", "Jewelry", "Accessories", "Alpha", "Other"];
@@ -62,13 +72,16 @@ const SCHEMA = {
 // Shared brand list (brand -> category) from the website. Cached by Cloudflare for 1 hour.
 const BRANDS_URL = "https://usefulgadgetssl.github.io/styling-studio/brands.json";
 const bnorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-async function loadBrands() {
+async function loadBank() {
   try {
     const r = await fetch(BRANDS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return (j.brands || []).filter(b => b && typeof b.name === "string" && CATS.includes(b.category));
-  } catch { return []; }
+    if (!r.ok) return {};
+    return await r.json();
+  } catch { return {}; }
+}
+async function loadBrands() {
+  const j = await loadBank();
+  return (j.brands || []).filter(b => b && typeof b.name === "string" && CATS.includes(b.category));
 }
 function brandCategory(brands, name) {
   const n = bnorm(name);
@@ -128,6 +141,25 @@ const MPURL = /^https:\/\/marketplace\.secondlife\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?
 const CODE_MINUTES = 10;
 const SESSION_DAYS = 90;
 const MAX_STORES = 2000;   // per avatar
+const AUTO_APPROVE = 3;    // different avatars with the same store + region -> shared automatically
+
+// Same idea as storeBrandName() on the website: "[theSkinnery] Mainstore" -> "theskinnery"
+const STORE_WORDS = /\b(?:main\s*store|mainstore|main|store|shop|official|hq|outlet|sim|flagship|boutique|landmark|lm|location|gacha|event)\b/gi;
+const storeKey = name => bnorm(String(name || "").replace(/[\[\]{}()*|]/g, " ").replace(STORE_WORDS, " "));
+// Names that are about the customer's own place, never a store
+const PRIVATE_NAME = /^(?:home|my home|house|my house|skybox|my skybox|sandbox|platform|land|my land|parcel|rez|rez zone|work|club|beach|pose|poses|photo|photos|studio|my studio)$/;
+function slurlRegion(slurl) {
+  const m = String(slurl).match(/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/secondlife\/|secondlife:\/\/)([^\/]+)/i);
+  if (!m) return "";
+  let r = m[1];
+  try { r = decodeURIComponent(r.replace(/\+/g, " ")); } catch {}
+  return r.toLowerCase().replace(/\s+/g, " ").trim();
+}
+function isAdmin(env, ownerName) {
+  const n = String(ownerName || "").toLowerCase().replace(/\s+resident$/, "").trim();
+  const list = String(env.ADMIN_NAMES || "ChristineStarz").split(",").map(x => x.toLowerCase().replace(/\s+resident$/, "").trim()).filter(Boolean);
+  return !!n && list.includes(n);
+}
 
 let tablesReady = false;
 async function ensureTables(env) {
@@ -136,7 +168,11 @@ async function ensureTables(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS codes (code TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, expires INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, owner_key TEXT NOT NULL, owner_name TEXT, created INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS stores (owner_key TEXT NOT NULL, name TEXT NOT NULL, shape TEXT, slurl TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (owner_key, name, slurl))"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS scans (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_key TEXT NOT NULL, created INTEGER NOT NULL, items TEXT NOT NULL)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS scans (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_key TEXT NOT NULL, created INTEGER NOT NULL, items TEXT NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS prefs (owner_key TEXT PRIMARY KEY, share INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS suggestions (key TEXT NOT NULL, region TEXT NOT NULL, owner_key TEXT NOT NULL, name TEXT NOT NULL, slurl TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (key, region, owner_key))"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS shared (key TEXT PRIMARY KEY, name TEXT NOT NULL, slurl TEXT NOT NULL, how TEXT NOT NULL, updated INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS rejected (key TEXT NOT NULL, region TEXT NOT NULL, PRIMARY KEY (key, region))")
   ]);
   tablesReady = true;
 }
@@ -155,6 +191,38 @@ function sameText(a, b) {
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
+}
+
+// Copy synced stores that are not in the shared bank to "suggestions". Only name + SLURL; never Marketplace links.
+async function suggestStores(env, owner, lines, reset, now) {
+  const pref = await env.DB.prepare("SELECT share FROM prefs WHERE owner_key = ?").bind(owner).first();
+  if (pref && !pref.share) return;
+  const bank = await loadBank();
+  const known = new Set((bank.stores || []).filter(s => s && typeof s.name === "string").map(s => storeKey(s.name)).filter(Boolean));
+  const stmts = [];
+  if (reset) stmts.push(env.DB.prepare("DELETE FROM suggestions WHERE owner_key = ?").bind(owner));
+  const touched = new Map();
+  for (const l of lines) {
+    const p = l.split("|");
+    if (p.length < 3) continue;
+    const name = p[0].trim().slice(0, 80), slurl = p.slice(2).join("|").trim();
+    if (!name || !SLURL.test(slurl)) continue;
+    const key = storeKey(name), region = slurlRegion(slurl);
+    if (key.length < 3 || !region || PRIVATE_NAME.test(key) || known.has(key)) continue;
+    stmts.push(env.DB.prepare("INSERT OR REPLACE INTO suggestions (key, region, owner_key, name, slurl, created) VALUES (?, ?, ?, ?, ?, ?)")
+      .bind(key, region, owner, name, slurl, now));
+    touched.set(key + "\n" + region, { key, region });
+  }
+  if (stmts.length) await env.DB.batch(stmts);
+  // Approve automatically when enough different avatars agree (same store name, same region)
+  for (const { key, region } of touched.values()) {
+    const done = await env.DB.prepare("SELECT 1 AS x FROM shared WHERE key = ? UNION ALL SELECT 1 FROM rejected WHERE key = ? AND region = ? LIMIT 1").bind(key, key, region).first();
+    if (done) continue;
+    const c = await env.DB.prepare("SELECT COUNT(DISTINCT owner_key) AS n FROM suggestions WHERE key = ? AND region = ?").bind(key, region).first();
+    if (!c || c.n < AUTO_APPROVE) continue;
+    const best = await env.DB.prepare("SELECT name, slurl FROM suggestions WHERE key = ? AND region = ? ORDER BY created DESC LIMIT 1").bind(key, region).first();
+    if (best) await env.DB.prepare("INSERT OR IGNORE INTO shared (key, name, slurl, how, updated) VALUES (?, ?, ?, 'auto', ?)").bind(key, best.name, best.slurl, now).run();
+  }
 }
 
 // Requests from the U.G. Styling Assistant HUD. They have no Origin, so they must carry the HUD secret.
@@ -197,6 +265,8 @@ async function handleHud(request, env, path) {
     if (before + added > MAX_STORES) return text("FULL " + MAX_STORES, 413);
     if (stmts.length) await env.DB.batch(stmts);
     const total = (await env.DB.prepare("SELECT COUNT(*) AS c FROM stores WHERE owner_key = ?").bind(owner).first()).c;
+    // Suggestions for the shared bank. Runs after the private sync is saved, and a problem here never affects it.
+    try { await suggestStores(env, owner, lines, reset, now); } catch (e) {}
     return text("SYNCED " + added + " " + total);
   }
 
@@ -260,9 +330,15 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers });
 
     // --- account ---
-    if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores" || path === "/scans/latest") {
+    if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores" || path === "/scans/latest" ||
+        path === "/shared" || path === "/prefs" || path === "/admin/suggestions" || path === "/admin/decide") {
       if (!env.DB) return reply({ error: "Database (DB) is not connected yet" }, 503);
       await ensureTables(env);
+      // Approved suggestions, for everyone (no login). Only store name + SLURL.
+      if (path === "/shared") {
+        const r = await env.DB.prepare("SELECT name, slurl FROM shared ORDER BY name LIMIT 5000").all();
+        return reply({ stores: r.results || [] });
+      }
       if (path === "/auth/pair") {
         if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405);
         let body; try { body = await request.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
@@ -294,6 +370,48 @@ export default {
         const row = await env.DB.prepare("SELECT created, items FROM scans WHERE owner_key = ? ORDER BY id DESC LIMIT 1").bind(s.owner_key).first();
         if (!row) return reply({ created: 0, items: [] });
         return reply({ created: row.created, items: JSON.parse(row.items || "[]") });
+      }
+      if (path === "/prefs") {
+        if (request.method === "POST") {
+          let body; try { body = await request.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
+          const share = body && body.share === false ? 0 : 1;
+          const stmts = [env.DB.prepare("INSERT OR REPLACE INTO prefs (owner_key, share) VALUES (?, ?)").bind(s.owner_key, share)];
+          if (!share) stmts.push(env.DB.prepare("DELETE FROM suggestions WHERE owner_key = ?").bind(s.owner_key));
+          await env.DB.batch(stmts);
+        }
+        const p = await env.DB.prepare("SELECT share FROM prefs WHERE owner_key = ?").bind(s.owner_key).first();
+        return reply({ share: !p || !!p.share, admin: isAdmin(env, s.owner_name) });
+      }
+      // --- admin: review store suggestions ---
+      if (!isAdmin(env, s.owner_name)) return reply({ error: "Admin only" }, 403);
+      if (path === "/admin/suggestions") {
+        const pend = await env.DB.prepare(
+          "SELECT g.key, g.region, g.n, g.last, " +
+          "(SELECT name FROM suggestions x WHERE x.key = g.key AND x.region = g.region ORDER BY created DESC LIMIT 1) AS name, " +
+          "(SELECT slurl FROM suggestions x WHERE x.key = g.key AND x.region = g.region ORDER BY created DESC LIMIT 1) AS slurl " +
+          "FROM (SELECT key, region, COUNT(DISTINCT owner_key) AS n, MAX(created) AS last FROM suggestions GROUP BY key, region) g " +
+          "WHERE g.key NOT IN (SELECT key FROM shared) AND NOT EXISTS (SELECT 1 FROM rejected r WHERE r.key = g.key AND r.region = g.region) " +
+          "ORDER BY g.n DESC, g.last DESC LIMIT 300").all();
+        const sh = await env.DB.prepare("SELECT key, name, slurl, how, updated FROM shared ORDER BY updated DESC LIMIT 1000").all();
+        return reply({ pending: pend.results || [], shared: sh.results || [], autoApprove: AUTO_APPROVE });
+      }
+      if (path === "/admin/decide") {
+        if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+        let body; try { body = await request.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
+        const key = String(body && body.key || "").slice(0, 100), region = String(body && body.region || "").slice(0, 100), action = body && body.action;
+        if (!key) return reply({ error: "Missing store" }, 400);
+        const now = Date.now();
+        if (action === "approve") {
+          const best = await env.DB.prepare("SELECT name, slurl FROM suggestions WHERE key = ? AND region = ? ORDER BY created DESC LIMIT 1").bind(key, region).first();
+          if (!best) return reply({ error: "Suggestion not found" }, 404);
+          const name = String(body.name || best.name).trim().slice(0, 80) || best.name;
+          await env.DB.prepare("INSERT OR REPLACE INTO shared (key, name, slurl, how, updated) VALUES (?, ?, ?, 'admin', ?)").bind(key, name, best.slurl, now).run();
+        } else if (action === "reject") {
+          await env.DB.prepare("INSERT OR IGNORE INTO rejected (key, region) VALUES (?, ?)").bind(key, region).run();
+        } else if (action === "remove") {
+          await env.DB.prepare("DELETE FROM shared WHERE key = ?").bind(key).run();
+        } else return reply({ error: "Unknown action" }, 400);
+        return reply({ ok: true });
       }
     }
 
