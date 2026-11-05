@@ -13,7 +13,9 @@
 //   POST /auth/logout                          log out
 //   GET  /stores      -> {stores:[{name,shape,slurl}]}  my private stores
 //   POST /lsl/code    (HUD) -> "CODE ABC123"   new login code, valid 10 minutes
-//   POST /lsl/sync    (HUD) lines "name|shape|slurl-or-Marketplace-link", first line "RESET" = replace all
+//   POST /lsl/sync    (HUD) lines "name|shape|slurl-or-Marketplace-link". Adds/updates only ("RESET" is ignored)
+//   POST /stores/delete {name, slurl}  remove one store from my private bank
+//   POST /stores/clear                 remove all my stores
 //   POST /lsl/scan    (HUD) lines "name|creator", first line "NEW" (new scan) or "MORE" (rest of it)
 //   GET  /scans/latest -> {created, items:[{name,creator}]}  my latest outfit scan
 //   GET  /shared       -> {stores:[{name,slurl}]}  approved store suggestions (added to the shared bank)
@@ -249,8 +251,10 @@ async function handleHud(request, env, path) {
   if (path === "/lsl/sync") {
     const lines = (await request.text()).split("\n").map(l => l.trim()).filter(Boolean).slice(0, 200);
     const stmts = [];
-    let reset = false;
-    if (lines[0] === "RESET") { reset = true; lines.shift(); stmts.push(env.DB.prepare("DELETE FROM stores WHERE owner_key = ?").bind(owner)); }
+    // A sync only adds and updates (2026-11-05). "RESET" from older HUDs is ignored, so stores deleted
+    // in the HUD stay in the private store bank. They are removed on the website (/stores/delete).
+    const reset = false;
+    if (lines[0] === "RESET") lines.shift();
     let added = 0;
     for (const l of lines) {
       const p = l.split("|");
@@ -331,7 +335,8 @@ export default {
 
     // --- account ---
     if (path === "/auth/pair" || path === "/me" || path === "/auth/logout" || path === "/stores" || path === "/scans/latest" ||
-        path === "/shared" || path === "/prefs" || path === "/admin/suggestions" || path === "/admin/decide") {
+        path === "/shared" || path === "/prefs" || path === "/admin/suggestions" || path === "/admin/decide" ||
+        path === "/stores/delete" || path === "/stores/clear") {
       if (!env.DB) return reply({ error: "Database (DB) is not connected yet" }, 503);
       await ensureTables(env);
       // Approved suggestions, for everyone (no login). Only store name + SLURL.
@@ -365,6 +370,18 @@ export default {
       if (path === "/stores") {
         const r = await env.DB.prepare("SELECT name, shape, slurl, updated FROM stores WHERE owner_key = ? ORDER BY updated DESC LIMIT ?").bind(s.owner_key, MAX_STORES).all();
         return reply({ stores: r.results || [] });
+      }
+      if (path === "/stores/delete" || path === "/stores/clear") {
+        if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+        if (path === "/stores/clear") {
+          await env.DB.prepare("DELETE FROM stores WHERE owner_key = ?").bind(s.owner_key).run();
+          return reply({ ok: true });
+        }
+        let body; try { body = await request.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
+        const name = String(body && body.name || ""), slurl = String(body && body.slurl || "");
+        if (!name || !slurl) return reply({ error: "Missing store" }, 400);
+        const r = await env.DB.prepare("DELETE FROM stores WHERE owner_key = ? AND name = ? AND slurl = ?").bind(s.owner_key, name, slurl).run();
+        return reply({ ok: true, deleted: (r.meta && r.meta.changes) || 0 });
       }
       if (path === "/scans/latest") {
         const row = await env.DB.prepare("SELECT created, items FROM scans WHERE owner_key = ? ORDER BY id DESC LIMIT 1").bind(s.owner_key).first();
