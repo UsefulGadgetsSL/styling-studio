@@ -463,7 +463,13 @@ $('importScan').onclick=async()=>{const st=$('reportStatus');
   st.textContent=added+' item(s) imported from your scan ('+when+'). '+(items.length-added)+' were already in the list. Add body layers (skin, makeup, tattoos) with a screenshot + Read with AI.';notify('Scan imported')}
  catch(e){st.textContent=e.status===401?'Please log in again (Settings & Accounts → Account).':'Could not get your scan: '+e.message}};
 // Start after the rest of the page script has run (the AI endpoint is set further down)
-setTimeout(()=>{showAccount();loadCloudStores();loadDbShared()},0);
+setTimeout(()=>{showAccount();loadCloudStores();loadDbShared();loginFromLink()},0);
+// 🌐 OPEN WEBSITE in the HUD opens ".../#login=ABC123": log in with that code by itself.
+// The code is removed from the address right away. If it fails, show Settings so the message can be read.
+async function loginFromLink(){const m=location.hash.match(/login=([A-Za-z0-9]{6})/);if(!m)return;
+ try{history.replaceState(null,'',location.pathname+location.search)}catch{}
+ $('acctCode').value=m[1].toUpperCase();await $('acctLogin').onclick();
+ if(!(account&&account.token)){const b=document.querySelector('[data-page="settings"]');if(b)b.click();notify('Login failed – see Settings & Accounts → Account')}}
 // ---- Store suggestions: my sharing choice, and the admin review list ----
 async function loadPrefs(){try{const p=await api('/prefs');$('acctShare').checked=!!p.share;$('adminCard').classList.toggle('hidden',!p.admin);if(p.admin)loadAdmin()}catch{}}
 $('acctShare').onchange=async()=>{const share=$('acctShare').checked;
