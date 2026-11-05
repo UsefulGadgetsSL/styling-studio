@@ -442,10 +442,10 @@ function renderMyStores(){const root=$('myStoresList');if(!root)return;const all
  const q=bnorm($('myStoresFind').value||'');root.innerHTML='';
  const list=all.filter(s=>!q||bnorm(s.name+' '+(s.category||'')).includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
  if(!list.length){root.textContent=all.length?'No stores match.':'No stores yet. In the HUD: 🔄 SYNC → 🔄 SYNC ALL.';return}
- for(const s of list.slice(0,500)){const row=document.createElement('div');row.className='brandrow';
+ for(const s of list.slice(0,500)){const row=document.createElement('div');row.className='brandrow';row.style.gridTemplateColumns='minmax(0,1.4fr) minmax(0,1fr) 36px';
   const nm=document.createElement('div');nm.textContent=(isMpLink(s.slurl)?'🛒 ':'')+s.name;
   const info=document.createElement('div');info.className='small';info.textContent=(s.category?s.category+' · ':'');
-  const a=document.createElement('a');a.textContent=isMpLink(s.slurl)?'Marketplace ↗':'Teleport ↗';
+  const a=document.createElement('a');a.textContent=isMpLink(s.slurl)?'Marketplace ↗':'Teleport ↗';a.style.color='#ff9fc4';
   if(isMpLink(s.slurl)||/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)/i.test(s.slurl)){a.href=s.slurl;a.target='_blank';a.rel='noopener'}info.append(a);
   const del=document.createElement('button');del.className='danger';del.textContent='×';del.title='Delete '+s.name;
   del.onclick=async()=>{if(!confirm('Delete "'+s.name+'" from your private store bank?'))return;
@@ -498,20 +498,20 @@ $('acctShare').onchange=async()=>{const share=$('acctShare').checked;
  try{await api('/prefs',{method:'POST',body:JSON.stringify({share})});notify(share?'Your stores will be suggested at your next SYNC ALL':'Sharing turned off – your suggestions were deleted')}
  catch(e){$('acctShare').checked=!share;notify('Could not save: '+e.message)}};
 const okSl=u=>/^(?:https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/|secondlife:\/\/)/i.test(String(u||''));
-function slLink(u){const a=document.createElement('a');a.textContent='Teleport ↗';if(okSl(u)){a.href=u;a.target='_blank';a.rel='noopener'}return a}
+function slLink(u){const a=document.createElement('a');a.textContent='Teleport ↗';a.style.color='#ff9fc4';if(okSl(u)){a.href=u;a.target='_blank';a.rel='noopener'}return a}
 async function adminDo(body,msg){try{await api('/admin/decide',{method:'POST',body:JSON.stringify(body)});notify(msg);await loadAdmin();loadDbShared()}catch(e){notify('Failed: '+e.message)}}
 async function loadAdmin(){const pr=$('adminPending'),sr=$('adminShared');pr.textContent='Loading…';sr.textContent='';
  let j;try{j=await api('/admin/suggestions')}catch(e){pr.textContent='Could not load suggestions: '+e.message;return}
  $('adminInfo').textContent=(j.pending||[]).length+' waiting · approved automatically when '+(j.autoApprove||3)+' different avatars have the same store in the same region';
  pr.innerHTML='';if(!(j.pending||[]).length)pr.textContent='No suggestions waiting.';
- for(const s of j.pending||[]){const row=document.createElement('div');row.className='brandrow';
+ for(const s of j.pending||[]){const row=document.createElement('div');row.className='brandrow';row.style.gridTemplateColumns='minmax(0,1.2fr) minmax(0,1fr) auto auto';
   const nm=document.createElement('input');nm.type='text';nm.value=s.name;nm.setAttribute('aria-label','Store name');
   const info=document.createElement('div');info.className='small';info.textContent=s.region+' · '+s.n+' avatar'+(s.n==1?'':'s')+' ';info.append(slLink(s.slurl));
   const ok=document.createElement('button');ok.textContent='Approve';ok.onclick=()=>adminDo({action:'approve',key:s.key,region:s.region,name:nm.value.trim()},nm.value.trim()+' added to the shared bank');
   const no=document.createElement('button');no.className='danger';no.textContent='Reject';no.onclick=()=>adminDo({action:'reject',key:s.key,region:s.region},s.name+' rejected');
   row.append(nm,info,ok,no);pr.append(row)}
  if(!(j.shared||[]).length){sr.textContent='None yet.';return}
- for(const s of j.shared){const row=document.createElement('div');row.className='brandrow';
+ for(const s of j.shared){const row=document.createElement('div');row.className='brandrow';row.style.gridTemplateColumns='minmax(0,1.2fr) minmax(0,1fr) auto';
   const nm=document.createElement('div');nm.textContent=s.name;
   const info=document.createElement('div');info.className='small';info.textContent=(s.how==='auto'?'auto':'approved')+' · '+new Date(s.updated).toLocaleDateString()+' ';info.append(slLink(s.slurl));
   const rm=document.createElement('button');rm.className='danger';rm.textContent='Remove';rm.onclick=()=>{if(confirm('Remove '+s.name+' from the shared bank?'))adminDo({action:'remove',key:s.key},s.name+' removed')};
