@@ -468,8 +468,10 @@ setTimeout(()=>{showAccount();loadCloudStores();loadDbShared();loginFromLink()},
 // The code is removed from the address right away. If it fails, show Settings so the message can be read.
 async function loginFromLink(){const m=location.hash.match(/login=([A-Za-z0-9]{6})/);if(!m)return;
  try{history.replaceState(null,'',location.pathname+location.search)}catch{}
- $('acctCode').value=m[1].toUpperCase();await $('acctLogin').onclick();
- if(!(account&&account.token)){const b=document.querySelector('[data-page="settings"]');if(b)b.click();notify('Login failed – see Settings & Accounts → Account')}}
+ const before=account&&account.token;$('acctCode').value=m[1].toUpperCase();await $('acctLogin').onclick();
+ if(account&&account.token&&account.token!==before)return;   // logged in with the new code
+ const msg=before?'That login code did not work (too old or used). You are still logged in as '+(account&&account.name||'your avatar')+'.':'That login code did not work (too old or used). Get a new one in the HUD: 🔄 SYNC → 🔑 WEB LOGIN.';
+ const b=document.querySelector('[data-page="settings"]');if(b)b.click();setTimeout(()=>{$('acctStatus').textContent=msg},600);notify(msg)}
 // ---- Store suggestions: my sharing choice, and the admin review list ----
 async function loadPrefs(){try{const p=await api('/prefs');$('acctShare').checked=!!p.share;$('adminCard').classList.toggle('hidden',!p.admin);if(p.admin)loadAdmin()}catch{}}
 $('acctShare').onchange=async()=>{const share=$('acctShare').checked;
