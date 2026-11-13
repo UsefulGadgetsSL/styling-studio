@@ -1,6 +1,6 @@
 {
   "version": 5,
-  "updated": "2026-11-07",
+  "updated": "2026-11-13",
   "note": "brands: brands that (almost) only make one kind of product. Name = how the brand starts the product name. stores: the shared store bank (store name + SLURL) used for LM links on styling cards. Edit in Obsidian: Styling Studio – designerliste.",
   "brands": [
     { "name": "Stealthic", "category": "Hair" },
@@ -75,6 +75,9 @@
     { "name": "Stealthic", "slurl": "http://maps.secondlife.com/secondlife/Rapture/132/128/22", "anywhere": true },
     { "name": "DOUX", "slurl": "http://maps.secondlife.com/secondlife/Secrets/185/155/1360", "anywhere": true },
     { "name": "Truth", "slurl": "http://maps.secondlife.com/secondlife/Truth/110/126/23", "anywhere": true },
+    { "name": "Angel Eyes", "slurl": "https://maps.secondlife.com/secondlife/Peach/223/224/2501", "anywhere": true },
+    { "name": "Glam Affair", "slurl": "https://maps.secondlife.com/secondlife/Beauty%20Avatar%20couture/163/134/24", "anywhere": true },
+    { "name": "Tableau Vivant", "slurl": "https://maps.secondlife.com/secondlife/Beauty%20Avatar%20couture/163/134/24", "anywhere": true },
     { "name": "Rowne", "slurl": "http://maps.secondlife.com/secondlife/Rowne/128/128/2", "src": "hw-oct31" },
     { "name": "ADDAMS", "slurl": "http://maps.secondlife.com/secondlife/Addams%20Clothing/170/111/26", "src": "hw-oct31" },
     { "name": "Cynful Clothing \u0026 Co.", "slurl": "https://maps.secondlife.com/secondlife/Cynful/129/119/29", "src": "hw-oct31" },
