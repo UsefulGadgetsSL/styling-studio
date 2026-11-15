@@ -389,7 +389,7 @@ if($('credit').checked)out.push('','Created with Useful Gadgets Styling Studio')
 return out.join(String.fromCharCode(10))}
 // Teleport links: maps.secondlife.com/secondlife/Region/x/y/z -> secondlife:///app/teleport/Region/x/y/z
 // (clicked in a notecard this opens the teleport window directly). Other links are left as they are.
-function cardLink(u){if(!$('tpLinks').checked)return u;const m=String(u).match(/^https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/secondlife\/([^\/?#]+)(?:\/(-?\d+))?(?:\/(-?\d+))?(?:\/(-?\d+))?/i);if(!m)return u;return 'secondlife:///app/teleport/'+m[1]+'/'+(m[2]||128)+'/'+(m[3]||128)+'/'+(m[4]||25)}
+function cardLink(u){u=String(u||'').replace(/[​-‍﻿]/g,'').trim();if(!$('tpLinks').checked)return u;const m=u.match(/https?:\/\/(?:maps\.secondlife\.com|slurl\.com)\/secondlife\/([^\/?#\s]+)(?:\/(-?\d+))?(?:\/(-?\d+))?(?:\/(-?\d+))?/i);if(!m)return u;return 'secondlife:///app/teleport/'+m[1]+'/'+(m[2]||128)+'/'+(m[3]||128)+'/'+(m[4]||25)}
 function preview(){$('preview').textContent=cardText()};['shape','brand','notes','cardStyle','credit','storeLinks','tpLinks','tidyNames'].forEach(id=>$(id).addEventListener('input',preview));['storeLinks','tpLinks','tidyNames','credit','cardStyle'].forEach(id=>$(id).addEventListener('change',preview));
 // Card texts: fill the boxes, save on every change
 function showTexts(){Object.entries(textIds).forEach(([k,id])=>{$(id).value=cardTexts[k]||''})}
