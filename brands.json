@@ -1,6 +1,6 @@
 {
   "version": 5,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "note": "brands: brands that (almost) only make one kind of product. Name = how the brand starts the product name. stores: the shared store bank (store name + SLURL) used for LM links on styling cards. Edit in Obsidian: Styling Studio – designerliste.",
   "brands": [
     { "name": "Stealthic", "category": "Hair" },
@@ -513,6 +513,7 @@
     { "name": "Soy", "slurl": "https://maps.secondlife.com/secondlife/Soy/115/204/2496", "src": "hw-nov14" },
     { "name": "TABOU", "slurl": "https://maps.secondlife.com/secondlife/Infinity%20Vale/46/221/2081", "src": "hw-nov14" },
     { "name": "Tentacio", "slurl": "https://maps.secondlife.com/secondlife/Asylum/111/65/21", "src": "hw-nov14" },
-    { "name": "VOZ", "slurl": "http://maps.secondlife.com/secondlife/The%20Sign/86/62/22", "src": "hw-nov14" }
+    { "name": "VOZ", "slurl": "http://maps.secondlife.com/secondlife/The%20Sign/86/62/22", "src": "hw-nov14" },
+    { "name": "Toksik", "slurl": "https://maps.secondlife.com/secondlife/Lost%20In%20Dreams/127/202/22", "src": "user" }
   ]
 }
