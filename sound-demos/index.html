@@ -36,6 +36,15 @@ h1:after{content:" ✧";color:var(--rose);font-size:.6em}
 .notice p{margin:0;color:var(--warn-ink)}
 .notice b{color:#fff}
 
+.modify{border:1px solid var(--line);background:linear-gradient(145deg,#12364a,#0c2b3e);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start}
+.modify .ic{font-size:24px;line-height:1;color:var(--rose)}
+.modify h2{margin:0 0 4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--blush);font-family:var(--body);font-weight:600}
+.modify p{margin:0;color:var(--ink)}
+.modify p+p{margin-top:6px;color:var(--muted);font-size:13px}
+.modify b{color:#fff}
+.gest{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:6px;min-width:0}
+.trig{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;color:var(--rose);background:#ff9db814;border:1px solid #ff9db840;border-radius:6px;padding:1px 7px;flex:0 0 auto}
+.chat{font-family:"Segoe UI","Segoe UI Symbol","Segoe UI Emoji","Cambria Math","Noto Sans Symbols 2","Noto Sans Math","Apple Color Emoji","Noto Color Emoji",sans-serif;font-size:15px;color:var(--ink);overflow-wrap:anywhere;min-width:0}
 .label{font-size:11px;letter-spacing:2.2px;text-transform:uppercase;color:#e8a2ba;margin:0 0 10px}
 .packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .pack{text-align:left;font:inherit;color:var(--ink);cursor:pointer;border-radius:14px;padding:14px 16px;
@@ -91,6 +100,15 @@ footer:before{content:"✧  ♥  ✧";display:block;color:#f49cbb;opacity:.75;ma
     <div>
       <h2 id="nq">Demo quality on purpose</h2>
       <p>The sounds on this page have been made <b>low quality on purpose</b>: muffled, crunchy, with a little hiss. This protects the products from copying. The gestures you buy play in <b>full, clear quality</b> (44.1 kHz) in Second Life.</p>
+    </div>
+  </section>
+
+  <section class="modify" aria-labelledby="mq">
+    <div class="ic" aria-hidden="true">✎</div>
+    <div>
+      <h2 id="mq">All gestures are Modify</h2>
+      <p>Each sound comes with a ready-made gesture: a <b>trigger word</b> (like <b>/sg1</b>) and a cute <b>chat line</b>, shown under every sound below. All gestures are <b>Modify</b>, so you can change the chat text, the trigger word or the shortcut key to whatever you like.</p>
+      <p>How: open the gesture from your inventory, click the Chat step, edit the text, then press Save.</p>
     </div>
   </section>
 
@@ -162,7 +180,14 @@ footer:before{content:"✧  ♥  ✧";display:block;color:#f49cbb;opacity:.75;ma
       const n = String(i+1).padStart(2,'0');
       const row = el('div','row');
       const meta = el('div','meta'); const bar = el('div','bar'); const fill = el('i'); bar.appendChild(fill);
-      meta.append(el('div','t',s.title), el('div','d',(s.desc?s.desc+' · ':'')+s.dur+' s'), bar);
+      meta.append(el('div','t',s.title), el('div','d',(s.desc?s.desc+' · ':'')+s.dur+' s'));
+      if(s.trigger || s.chat){
+        const g = el('div','gest'); g.setAttribute('aria-label','Gesture '+(s.trigger||'')+', chat line');
+        if(s.trigger) g.appendChild(el('span','trig',s.trigger));
+        if(s.chat) g.appendChild(el('span','chat',s.chat));
+        meta.appendChild(g);
+      }
+      meta.appendChild(bar);
       const btn = el('button','play','▶'); btn.type='button'; btn.id='play-'+p.id+'-'+n; btn.setAttribute('aria-label','Play '+s.title);
       row.append(el('span','num',n), meta, btn);
       const it = {title:s.title,row,btn,bar:fill,audio:new Audio('data:audio/wav;base64,'+s.b64)};
