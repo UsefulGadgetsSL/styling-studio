@@ -1,0 +1,186 @@
+<title>Useful Gadgets Sound Demos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@1,6..96,400;1,6..96,600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: boutique column on midnight navy; brand header, demo notice, pack picker cards, then the chosen pack's sound list */
+:root{
+  color-scheme:dark;
+  --bg:#061f31; --bg2:#092b40; --card:#12364a; --card2:#0b2a3d;
+  --line:#35566b; --ink:#f9eaf0; --muted:#c6a9bc; --rose:#ff9db8; --rose-deep:#ee82a9; --peach:#ffb1bb; --blush:#ffd4e2;
+  --warn-bg:#3a2236; --warn-line:#ff7b9c; --warn-ink:#ffe3ea; --btn-ink:#172b3c;
+  --display:"Bodoni Moda",Georgia,"Times New Roman",serif;
+  --body:Inter,"Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  background:radial-gradient(ellipse at 88% 3%,#173b4c 0,transparent 42%),radial-gradient(ellipse at 4% 95%,#392b48 0,transparent 38%),linear-gradient(150deg,var(--bg),var(--bg2) 62%,var(--bg));
+  background-color:var(--bg);background-attachment:fixed;
+  color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;min-height:100%;
+}
+.wrap{max-width:760px;margin:0 auto;padding-block:40px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:26px}
+header{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.badge{width:84px;height:84px;border-radius:50%;flex:0 0 auto;background:var(--card2) url("logo.png") center/contain no-repeat;box-shadow:0 0 22px #ff7b9c33}
+.brand{min-width:0}
+.brand .shop{font-family:var(--display);font-style:italic;color:#ffc5d6;font-size:18px}
+.brand .tag{font-size:10px;letter-spacing:2.4px;text-transform:uppercase;color:#e8a2ba}
+.brand .tag:before{content:"✧  ♥  ";color:var(--rose)}
+h1{font-family:var(--display);font-style:italic;font-weight:600;font-size:clamp(32px,6.5vw,48px);line-height:1.05;margin:4px 0 0;color:var(--blush);letter-spacing:-.5px;text-wrap:balance}
+h1:after{content:" ✧";color:var(--rose);font-size:.6em}
+.lead{color:var(--muted);margin:0;max-width:60ch}
+
+.notice{border:1.5px dashed var(--warn-line);background:var(--warn-bg);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start}
+.notice .ic{font-size:26px;line-height:1;color:var(--warn-line)}
+.notice h2{margin:0 0 4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--warn-ink);font-family:var(--body);font-weight:600}
+.notice p{margin:0;color:var(--warn-ink)}
+.notice b{color:#fff}
+
+.label{font-size:11px;letter-spacing:2.2px;text-transform:uppercase;color:#e8a2ba;margin:0 0 10px}
+.packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.pack{text-align:left;font:inherit;color:var(--ink);cursor:pointer;border-radius:14px;padding:14px 16px;
+  background:linear-gradient(145deg,#12364a,#0c2b3e);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.pack:hover{border-color:#75566e}
+.pack[aria-selected="true"]{border-color:var(--rose);box-shadow:0 0 0 1px var(--rose) inset,0 6px 22px #ff9db81f}
+.pack .pn{font-family:var(--display);font-style:italic;font-size:19px;color:var(--blush)}
+.pack .pt{color:var(--muted);font-size:13px}
+.pack .pc{margin-top:6px;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--rose)}
+.pack.soon{cursor:default;opacity:.62}
+.pack.soon .pc{color:var(--muted)}
+.pack:focus-visible,button:focus-visible,.cta:focus-visible{outline:2px solid #ffb3cb;outline-offset:2px}
+
+.panel{background:linear-gradient(145deg,#12364a,#0c2b3e);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 34px #0003;overflow:hidden}
+.phead{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:18px;border-bottom:1px solid var(--line)}
+.phead .pi{min-width:0;flex:1 1 280px}
+.phead h2{margin:0;font-family:var(--display);font-style:italic;font-weight:600;font-size:28px;color:var(--blush)}
+.phead p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border:0;border-radius:999px}
+.all{padding:10px 16px;background:#15394c;color:#ffe2ec;border:1px solid #6b566a;font-size:13px}
+.cta{display:inline-block;text-decoration:none;padding:10px 18px;border-radius:999px;background:linear-gradient(120deg,var(--rose-deep),var(--peach));color:var(--btn-ink);font-weight:600;font-size:13px}
+.row{display:grid;grid-template-columns:22px 1fr 44px;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid #ffffff10}
+.row:last-child{border-bottom:0}
+.row.playing{background:#ff9db812}
+.num{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;text-align:right}
+.meta{min-width:0}
+.meta .t{font-weight:500}
+.meta .d{color:var(--muted);font-size:13px}
+.bar{height:3px;background:#ffffff14;border-radius:2px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--rose-deep),var(--peach))}
+.play{width:44px;height:44px;background:linear-gradient(120deg,var(--rose-deep),var(--peach));color:var(--btn-ink);font-size:16px;box-shadow:0 4px 14px #fa8caf26;display:grid;place-items:center}
+.msg{padding:22px 18px;color:var(--muted)}
+.fine{color:var(--muted);font-size:13px;margin:0}
+footer{text-align:center;color:#b3a3b5;font-size:12px}
+footer:before{content:"✧  ♥  ✧";display:block;color:#f49cbb;opacity:.75;margin-bottom:6px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="badge" role="img" aria-label="Useful Gadgets logo"></div>
+    <div class="brand">
+      <div class="shop">Useful Gadgets</div>
+      <div class="tag">Second Life gestures</div>
+      <h1>Sound Demos</h1>
+    </div>
+  </header>
+
+  <p class="lead">Listen before you buy. Pick a gesture pack below and press play to hear every sound in it.</p>
+
+  <section class="notice" aria-labelledby="nq">
+    <div class="ic" aria-hidden="true">⚠</div>
+    <div>
+      <h2 id="nq">Demo quality on purpose</h2>
+      <p>The sounds on this page have been made <b>low quality on purpose</b>: muffled, crunchy, with a little hiss. This protects the products from copying. The gestures you buy play in <b>full, clear quality</b> (44.1 kHz) in Second Life.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="pl">
+    <p class="label" id="pl">Gesture packs</p>
+    <div class="packs" id="packs" role="tablist" aria-labelledby="pl"></div>
+  </section>
+
+  <section class="panel" id="panel" role="tabpanel" aria-live="polite">
+    <div class="msg">Loading sounds…</div>
+  </section>
+
+  <p class="fine">Full-quality sounds · mono WAV, made for Second Life</p>
+  <footer>Useful Gadgets · Second Life</footer>
+</div>
+
+<script>
+(function(){
+  const packsEl = document.getElementById('packs');
+  const panel = document.getElementById('panel');
+  let packs = [], items = [], current = null, queue = null, allBtn = null;
+
+  function stop(){
+    if(current){ current.audio.pause(); current.audio.currentTime=0; current.row.classList.remove('playing'); current.btn.textContent='▶'; current.btn.setAttribute('aria-label','Play '+current.title); current.bar.style.width='0'; }
+    current = null;
+  }
+  function stopAll(){ queue=null; stop(); if(allBtn) allBtn.textContent='▶ Play all'; }
+  function play(it,onEnd){
+    stop(); current = it;
+    it.row.classList.add('playing'); it.btn.textContent='■'; it.btn.setAttribute('aria-label','Stop '+it.title);
+    it.audio.onended = ()=>{ stop(); if(onEnd) onEnd(); };
+    it.audio.play().catch(()=>stop());
+  }
+  (function tick(){ if(current && current.audio.duration) current.bar.style.width=(100*current.audio.currentTime/current.audio.duration)+'%'; requestAnimationFrame(tick); })();
+
+  function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+  function renderPicker(sel){
+    packsEl.innerHTML='';
+    packs.forEach(p=>{
+      const soon = p.status==='soon';
+      const b = el('button','pack'+(soon?' soon':''));
+      b.type='button'; b.id='pack-'+p.id; b.setAttribute('role','tab');
+      b.setAttribute('aria-selected', String(p.id===sel));
+      if(soon) b.setAttribute('aria-disabled','true');
+      b.append(el('span','pn',p.name), el('span','pt',p.tagline||''), el('span','pc', soon ? 'Coming soon' : (p.sounds||[]).length+' sounds'));
+      b.addEventListener('click', ()=>{ if(!soon) location.hash = p.id; });
+      packsEl.appendChild(b);
+    });
+  }
+
+  function renderPack(p){
+    stopAll(); items=[]; panel.innerHTML='';
+    const head = el('div','phead'); const info = el('div','pi');
+    info.append(el('h2',null,p.name), el('p',null,p.desc||p.tagline||''));
+    const acts = el('div','acts');
+    allBtn = el('button','all','▶ Play all'); allBtn.type='button'; allBtn.id='playall';
+    allBtn.addEventListener('click', ()=>{
+      if(queue!==null){ stopAll(); return; }
+      queue=0; allBtn.textContent='■ Stop';
+      const next=()=>{ if(queue===null) return; if(queue>=items.length){ stopAll(); return; } play(items[queue++], ()=>setTimeout(next,400)); };
+      next();
+    });
+    acts.appendChild(allBtn);
+    if(p.url){ const a=el('a','cta','Buy on Marketplace'); a.href=p.url; a.target='_blank'; a.rel='noopener'; acts.appendChild(a); }
+    head.append(info, acts); panel.appendChild(head);
+
+    (p.sounds||[]).forEach((s,i)=>{
+      const n = String(i+1).padStart(2,'0');
+      const row = el('div','row');
+      const meta = el('div','meta'); const bar = el('div','bar'); const fill = el('i'); bar.appendChild(fill);
+      meta.append(el('div','t',s.title), el('div','d',(s.desc?s.desc+' · ':'')+s.dur+' s'), bar);
+      const btn = el('button','play','▶'); btn.type='button'; btn.id='play-'+p.id+'-'+n; btn.setAttribute('aria-label','Play '+s.title);
+      row.append(el('span','num',n), meta, btn);
+      const it = {title:s.title,row,btn,bar:fill,audio:new Audio('data:audio/wav;base64,'+s.b64)};
+      btn.addEventListener('click', ()=>{ queue=null; if(allBtn) allBtn.textContent='▶ Play all'; if(current===it) stop(); else play(it); });
+      panel.appendChild(row); items.push(it);
+    });
+  }
+
+  function route(){
+    const ready = packs.filter(p=>p.status!=='soon');
+    const want = location.hash.slice(1);
+    const p = ready.find(x=>x.id===want) || ready[0];
+    if(!p){ panel.innerHTML='<div class="msg">New sound packs are on the way.</div>'; renderPicker(''); return; }
+    renderPicker(p.id); renderPack(p);
+  }
+
+  fetch('packs.json').then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(data=>{ packs=data; route(); window.addEventListener('hashchange', route); })
+    .catch(()=>{ panel.innerHTML='<div class="msg">The sounds could not load. Reload the page to try again.</div>'; });
+})();
+</script>
