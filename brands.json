@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "updated": "2026-11-15",
+  "version": 6,
+  "updated": "2026-11-28",
   "note": "brands: brands that (almost) only make one kind of product. Name = how the brand starts the product name. stores: the shared store bank (store name + SLURL) used for LM links on styling cards. Edit in Obsidian: Styling Studio – designerliste.",
   "brands": [
     { "name": "Stealthic", "category": "Hair" },
@@ -514,6 +514,23 @@
     { "name": "TABOU", "slurl": "https://maps.secondlife.com/secondlife/Infinity%20Vale/46/221/2081", "src": "hw-nov14" },
     { "name": "Tentacio", "slurl": "https://maps.secondlife.com/secondlife/Asylum/111/65/21", "src": "hw-nov14" },
     { "name": "VOZ", "slurl": "http://maps.secondlife.com/secondlife/The%20Sign/86/62/22", "src": "hw-nov14" },
-    { "name": "Toksik", "slurl": "https://maps.secondlife.com/secondlife/Lost%20In%20Dreams/127/202/22", "src": "user" }
+    { "name": "Toksik", "slurl": "https://maps.secondlife.com/secondlife/Lost%20In%20Dreams/127/202/22", "src": "user" },
+    { "name": "2AM", "slurl": "http://maps.secondlife.com/secondlife/The%20Sign%20II/203/51/21", "src": "hw-nov21" },
+    { "name": "ALEXANDRITE", "slurl": "http://maps.secondlife.com/secondlife/Lavender%20Island/251/249/21", "src": "hw-nov21" },
+    { "name": "Animosity", "slurl": "http://maps.secondlife.com/secondlife/Cravone/198/133/30", "src": "hw-nov21" },
+    { "name": "COMPLEX", "slurl": "https://maps.secondlife.com/secondlife/COMPLEX/77/104/23", "src": "hw-nov21" },
+    { "name": "CURELESS", "slurl": "http://maps.secondlife.com/secondlife/Curemore/123/65/23", "src": "hw-nov21" },
+    { "name": "Elm. Home & Garden", "slurl": "https://maps.secondlife.com/secondlife/Primrose%20Place/108/225/23", "src": "hw-nov21" },
+    { "name": "EQUAL", "slurl": "https://maps.secondlife.com/secondlife/EQUAL/131/110/22", "src": "hw-nov21" },
+    { "name": "Eudora Beauty", "slurl": "http://maps.secondlife.com/secondlife/AM%20corporate/136/78/1999", "src": "hw-nov21" },
+    { "name": "Hangry", "slurl": "http://maps.secondlife.com/secondlife/xoxo/121/170/41", "src": "hw-nov21" },
+    { "name": "Kiu", "slurl": "http://maps.secondlife.com/secondlife/Berwick%20Land/47/97/988", "src": "hw-nov21" },
+    { "name": "Legion", "slurl": "http://maps.secondlife.com/secondlife/TOKYO%20ZERO/70/132/3186", "src": "hw-nov21" },
+    { "name": "MAGIC beauty", "slurl": "http://maps.secondlife.com/secondlife/Pasticcino/80/13/500", "src": "hw-nov21" },
+    { "name": "Muse", "slurl": "http://maps.secondlife.com/secondlife/Stingray%20Bay/202/211/2056", "src": "hw-nov21" },
+    { "name": "theROOM", "slurl": "http://maps.secondlife.com/secondlife/DLicious/76/32/1696", "src": "hw-nov21" },
+    { "name": "wixla", "slurl": "http://maps.secondlife.com/secondlife/Baboo/178/186/1302", "src": "hw-nov21" },
+    { "name": "YALLA", "slurl": "http://maps.secondlife.com/secondlife/YALLA/59/139/1009", "src": "hw-nov21" },
+    { "name": "YOKAI", "slurl": "http://maps.secondlife.com/secondlife/Reef%20Island/92/29/22", "src": "hw-nov21" }
   ]
 }
